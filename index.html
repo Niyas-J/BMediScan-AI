@@ -1,141 +1,174 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <link rel="stylesheet" href="style.css">
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Student ID Card Generator</title>
-    body {
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Darunnajath Academy ID Generator</title>
+  <style>
+    * {
+      box-sizing: border-box;
       font-family: Arial, sans-serif;
-      background: #f4f4f4;
+    }
+
+    body {
+      background: #f2f2f2;
       margin: 0;
       padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
     }
 
     .container {
       display: flex;
       flex-direction: column;
-      align-items: center;
+      gap: 20px;
+      max-width: 500px;
+      margin: 0 auto;
     }
 
-    .id-card {
-      width: 320px;
-      height: 500px;
-      background: url('https://i.imgur.com/YOUR_IMAGE_URL.jpg') no-repeat center;
-      background-size: cover;
-      border: 2px solid #000;
-      border-radius: 10px;
-      color: #000;
-      padding: 20px;
-      box-sizing: border-box;
+    .card-preview {
       position: relative;
-    }
-
-    .photo {
-      width: 100px;
-      height: 100px;
-      background: #fff;
-      border-radius: 10px;
-      overflow: hidden;
-      margin: 0 auto 10px;
-    }
-
-    .photo img {
       width: 100%;
-      height: 100%;
-      object-fit: cover;
+      padding-top: 60%; /* Maintain ratio */
+      background-image: url("background.jpg"); /* Change this to your image path */
+      background-size: cover;
+      background-position: center;
+      border: 2px solid #333;
+      border-radius: 10px;
     }
 
-    .info {
-      text-align: center;
-      background: rgba(255,255,255,0.8);
-      padding: 10px;
+    .card-content {
+      position: absolute;
+      top: 10%;
+      left: 5%;
+      right: 5%;
+      color: #fff;
+    }
+
+    .card-content img {
+      width: 80px;
+      height: 80px;
+      border-radius: 8px;
+      object-fit: cover;
+      border: 2px solid white;
+      margin-bottom: 10px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    input[type="text"],
+    input[type="date"],
+    input[type="file"] {
+      padding: 8px;
+      font-size: 14px;
+      border: 1px solid #aaa;
       border-radius: 5px;
     }
 
-    input, button {
-      margin: 5px 0;
+    button {
       padding: 10px;
-      width: 300px;
+      background-color: #0066cc;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
     }
 
-    canvas {
-      display: none;
+    button:hover {
+      background-color: #004b99;
+    }
+
+    @media (max-width: 600px) {
+      .card-preview {
+        padding-top: 90%;
+      }
     }
   </style>
 </head>
-<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
-<script>
-  function downloadCard() {
-    const card = document.getElementById("card");
-    html2canvas(card).then(canvas => {
-      const link = document.createElement("a");
-      link.download = "student-id-card.png";
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-    });
-  }
-</script>
-<button onclick="downloadCard()">Download ID Card</button>
-
 <body>
 
-<div class="container">
-  <h2>Student ID Generator</h2>
-  <input type="text" placeholder="Full Name" id="nameInput">
-  <input type="text" placeholder="DOB (DD-MM-YYYY)" id="dobInput">
-  <input type="text" placeholder="Father's Name" id="fatherInput">
-  <input type="text" placeholder="Phone Number" id="phoneInput">
-  <input type="text" placeholder="ID No" id="idInput">
-  <input type="text" placeholder="Address" id="addressInput">
-  <input type="file" accept="image/*" id="photoInput">
+  <h1>Darunnajath Academy - ID Card Generator</h1>
+  <div class="container">
+    <!-- ID Card Preview -->
+    <div class="card-preview" id="card">
+      <div class="card-content">
+        <img id="photoPreview" src="" alt="Photo Preview" />
+        <p><strong>Name:</strong> <span id="previewName">Your Name</span></p>
+        <p><strong>DOB:</strong> <span id="previewDOB">YYYY-MM-DD</span></p>
+        <p><strong>Reg No:</strong> <span id="previewReg">0000</span></p>
+      </div>
+    </div>
 
-  <div class="id-card" id="card">
-    <div class="photo">
-      <img id="photoPreview" src="https://via.placeholder.com/100" alt="Student Photo"/>
+    <!-- Input Fields -->
+    <div class="form-group">
+      <label>Student Name:</label>
+      <input type="text" id="nameInput" placeholder="Enter student name" />
     </div>
-    <div class="info">
-      <h3 id="cardName">Your Name</h3>
-      <p><strong>DOB:</strong> <span id="cardDOB">--</span></p>
-      <p><strong>Father:</strong> <span id="cardFather">--</span></p>
-      <p><strong>Phone:</strong> <span id="cardPhone">--</span></p>
-      <p><strong>ID No:</strong> <span id="cardID">--</span></p>
-      <p><strong>Address:</strong> <span id="cardAddress">--</span></p>
+
+    <div class="form-group">
+      <label>Date of Birth:</label>
+      <input type="date" id="dobInput" />
     </div>
+
+    <div class="form-group">
+      <label>Register Number:</label>
+      <input type="text" id="regInput" placeholder="Enter registration number" />
+    </div>
+
+    <div class="form-group">
+      <label>Upload Photo:</label>
+      <input type="file" id="photoInput" accept="image/*" />
+    </div>
+
+    <!-- Download Button -->
+    <button onclick="downloadCard()">Download ID Card</button>
   </div>
 
-  <button onclick="downloadCard()">Download ID Card</button>
-  <canvas id="canvas" width="320" height="500"></canvas>
-</div>
+  <!-- JavaScript -->
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+  <script>
+    const nameInput = document.getElementById("nameInput");
+    const dobInput = document.getElementById("dobInput");
+    const regInput = document.getElementById("regInput");
+    const photoInput = document.getElementById("photoInput");
 
-<script>
-  const nameInput = document.getElementById('nameInput');
-  const dobInput = document.getElementById('dobInput');
-  const fatherInput = document.getElementById('fatherInput');
-  const phoneInput = document.getElementById('phoneInput');
-  const idInput = document.getElementById('idInput');
-  const addressInput = document.getElementById('addressInput');
-  const photoInput = document.getElementById('photoInput');
+    nameInput.addEventListener("input", () => {
+      document.getElementById("previewName").innerText = nameInput.value;
+    });
 
-  nameInput.addEventListener('input', () => document.getElementById('cardName').textContent = nameInput.value);
-  dobInput.addEventListener('input', () => document.getElementById('cardDOB').textContent = dobInput.value);
-  fatherInput.addEventListener('input', () => document.getElementById('cardFather').textContent = fatherInput.value);
-  phoneInput.addEventListener('input', () => document.getElementById('cardPhone').textContent = phoneInput.value);
-  idInput.addEventListener('input', () => document.getElementById('cardID').textContent = idInput.value);
-  addressInput.addEventListener('input', () => document.getElementById('cardAddress').textContent = addressInput.value);
+    dobInput.addEventListener("input", () => {
+      document.getElementById("previewDOB").innerText = dobInput.value;
+    });
 
-  photoInput.addEventListener('change', function() {
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      document.getElementById('photoPreview').src = e.target.result;
+    regInput.addEventListener("input", () => {
+      document.getElementById("previewReg").innerText = regInput.value;
+    });
+
+    photoInput.addEventListener("change", (e) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        document.getElementById("photoPreview").src = reader.result;
+      };
+      reader.readAsDataURL(e.target.files[0]);
+    });
+
+    function downloadCard() {
+      const card = document.getElementById("card");
+      html2canvas(card).then(canvas => {
+        const link = document.createElement("a");
+        link.download = "student-id-card.png";
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      });
     }
-    reader.readAsDataURL(photoInput.files[0]);
-  });
-
-  function downloadCard() {
-    const card = document.getElementById('card');
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-
-    html2canvas(card).then((canvasExport) => {
-      const link
+  </script>
+</body>
+</html>
