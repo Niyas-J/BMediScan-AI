@@ -64,6 +64,20 @@
     }
   </style>
 </head>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+<script>
+  function downloadCard() {
+    const card = document.getElementById("card");
+    html2canvas(card).then(canvas => {
+      const link = document.createElement("a");
+      link.download = "student-id-card.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    });
+  }
+</script>
+<button onclick="downloadCard()">Download ID Card</button>
+
 <body>
 
 <div class="container">
