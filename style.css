@@ -10,7 +10,7 @@ body {
 }
 
 .card {
-  background-image: url('bg.jpg'); /* change to your uploaded bg image */
+  background-image: url('baground.jpg'); /* change to your uploaded bg image */
   background-size: cover;
   background-position: center;
   width: 350px;
