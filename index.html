@@ -1,152 +1,160 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Darunnajath ID Generator</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ID Card Generator with OCR AI</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.1/dist/tesseract.min.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-storage.js";const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_ID",
+  appId: "YOUR_APP_ID"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+window.uploadAndSave = async function () {
+  const name = document.getElementById("name").value;
+  const roll = document.getElementById("roll").value;
+  const dob = document.getElementById("dob").value;
+  const cls = document.getElementById("class").value;
+  const father = document.getElementById("father").value;
+  const phone = document.getElementById("phone").value;
+  const address = document.getElementById("address").value;
+  const dept = document.getElementById("dept").value;
+  const photoFile = document.getElementById("photo").files[0];
+
+  const photoRef = ref(storage, `photos/${roll}-${photoFile.name}`);
+  await uploadBytes(photoRef, photoFile);
+  const photoURL = await getDownloadURL(photoRef);
+
+  await addDoc(collection(db, "students"), {
+    name, roll, dob, class: cls, father, phone, address, dept, photoURL, timestamp: new Date()
+  });
+
+  alert("Student info saved successfully!");
+  generateCard(photoURL);
+};
+
+  </script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-image: url('baground.jpg');
-      background-size: cover;
-      background-position: center;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-    }
-
-    .container {
-      background: rgba(255, 255, 255, 0.95);
-      padding: 30px;
-      border-radius: 16px;
-      max-width: 500px;
-      width: 100%;
-      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-    }
-
-   .id-card {
-    background-image: url('bgorund.jpg');
-    width: 856px;
-    height: 540px;
-    padding: 0;
-    border-radius: 12px;
-    margin-bottom: 20px;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-}
-
-    .id-card img {
-      width: 100px;
-      height: 100px;
-      border-radius: 10px;
-      object-fit: cover;
-      border: 2px solid #333;
-    }
-
-    .id-card h3, .id-card p {
-      margin: 5px 0;
-    }
-
-    input[type="text"], input[type="date"], input[type="file"] {
-      width: 100%;
-      padding: 10px;
-      margin: 10px 0;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-    }
-
-    button {
-      background: #007bff;
-      color: white;
-      padding: 12px;
-      width: 100%;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 16px;
-    }
-
-    button:hover {
-      background: #0056b3;
-    }
-
-    @media (max-width: 500px) {
-      .container {
-        margin: 10px;
-        padding: 20px;
-      }
-    }
+    .fade-in { animation: fadeIn 1s ease-in-out; }
+    @keyframes fadeIn { 0% {opacity: 0; transform: translateY(10px);} 100% {opacity: 1; transform: translateY(0);} }
   </style>
 </head>
-<body>
-  <div class="container">
-    <div class="id-card" id="card">
-      <img id="photoPreview" src="https://via.placeholder.com/100" alt="Photo">
-      <h3 id="cardName">Name: ______</h3>
-      <p id="cardDOB">DOB: ______</p>
-      <p id="cardReg">Reg No: ______</p>
+<body class="bg-gray-100 font-sans">
+  <div id="loginSection" class="flex justify-center items-center min-h-screen">
+    <div class="bg-white p-6 rounded-lg shadow-xl">
+      <h2 class="text-xl font-bold mb-4 text-center">Admin Login</h2>
+      <input type="password" id="adminPass" placeholder="Enter password" class="w-full p-2 border rounded mb-4">
+      <button onclick="checkLogin()" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Login</button>
+    </div>
+  </div>  <main id="mainApp" class="hidden p-6 grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+    <section class="bg-white p-6 rounded-2xl shadow-xl fade-in">
+      <h2 class="text-xl font-semibold mb-4">Enter Student Details</h2>
+      <form id="idForm" class="space-y-3">
+        <input class="w-full p-2 border rounded-lg" type="text" placeholder="Full Name" id="name">
+        <input class="w-full p-2 border rounded-lg" type="text" placeholder="Roll Number" id="roll">
+        <input class="w-full p-2 border rounded-lg" type="date" placeholder="Date of Birth" id="dob">
+        <input class="w-full p-2 border rounded-lg" type="text" placeholder="Class" id="class">
+        <input class="w-full p-2 border rounded-lg" type="text" placeholder="Father's Name" id="father">
+        <input class="w-full p-2 border rounded-lg" type="tel" placeholder="Phone Number" id="phone">
+        <textarea class="w-full p-2 border rounded-lg" placeholder="Address" id="address"></textarea>
+        <input class="w-full p-2 border rounded-lg" type="text" placeholder="Department" id="dept">
+        <input class="w-full p-2 border rounded-lg" type="file" id="photo"><div class="mt-4">
+      <label class="block mb-1 font-semibold">Upload Form/Document for Auto Fill:</label>
+      <input type="file" id="docUpload" onchange="extractTextFromDoc()" class="w-full border p-2 rounded">
     </div>
 
-    <label>Student Name:</label>
-    <input type="text" id="nameInput" placeholder="Enter your name">
+    <button class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700" type="button" onclick="uploadAndSave()">Save + Preview</button>
+  </form>
+</section>
 
-    <label>Date of Birth:</label>
-    <input type="date" id="dobInput">
-
-    <label>Register Number:</label>
-    <input type="text" id="regInput" placeholder="Enter your register number">
-
-    <label>Upload Photo:</label>
-    <input type="file" id="photoInput" accept="image/*">
-
-    <button onclick="downloadCard()">Download ID Card</button>
+<section class="bg-white p-6 rounded-2xl shadow-xl fade-in">
+  <h2 class="text-xl font-semibold mb-4">Live Preview</h2>
+  <div id="preview" class="relative w-full h-auto border-2 border-dashed border-gray-300 flex flex-col items-center justify-center bg-gray-50 text-center rounded-lg p-4">
+    <img id="previewPhoto" src="" alt="Photo" class="w-20 h-20 rounded-full object-cover mb-2 hidden">
+    <p id="previewName" class="text-lg font-bold"></p>
+    <p id="previewRoll" class="text-sm"></p>
+    <p id="previewDOB" class="text-sm"></p>
+    <p id="previewClass" class="text-sm"></p>
+    <p id="previewFather" class="text-sm"></p>
+    <p id="previewPhone" class="text-sm"></p>
+    <p id="previewAddress" class="text-sm"></p>
+    <p id="previewDept" class="text-sm"></p>
   </div>
+  <button class="mt-4 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600" onclick="downloadCard()">Download Card</button>
+</section>
 
-  <script>
-    const nameInput = document.getElementById('nameInput');
-    const dobInput = document.getElementById('dobInput');
-    const regInput = document.getElementById('regInput');
-    const photoInput = document.getElementById('photoInput');
+  </main>  <script>
+    const ADMIN_PASSWORD = "1234";
 
-    const cardName = document.getElementById('cardName');
-    const cardDOB = document.getElementById('cardDOB');
-    const cardReg = document.getElementById('cardReg');
-    const photoPreview = document.getElementById('photoPreview');
-
-    nameInput.addEventListener('input', () => {
-      cardName.textContent = `Name: ${nameInput.value}`;
-    });
-
-    dobInput.addEventListener('input', () => {
-      cardDOB.textContent = `DOB: ${dobInput.value}`;
-    });
-
-    regInput.addEventListener('input', () => {
-      cardReg.textContent = `Reg No: ${regInput.value}`;
-    });
-
-    photoInput.addEventListener('change', () => {
-      const file = photoInput.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = e => photoPreview.src = e.target.result;
-        reader.readAsDataURL(file);
+    function checkLogin() {
+      const pass = document.getElementById("adminPass").value;
+      if (pass === ADMIN_PASSWORD) {
+        document.getElementById("loginSection").classList.add("hidden");
+        document.getElementById("mainApp").classList.remove("hidden");
+      } else {
+        alert("Incorrect password");
       }
-    });
+    }
+
+    function generateCard(photoURL) {
+      document.getElementById("previewName").textContent = document.getElementById("name").value;
+      document.getElementById("previewRoll").textContent = "Roll: " + document.getElementById("roll").value;
+      document.getElementById("previewDOB").textContent = "DOB: " + document.getElementById("dob").value;
+      document.getElementById("previewClass").textContent = "Class: " + document.getElementById("class").value;
+      document.getElementById("previewFather").textContent = "Father: " + document.getElementById("father").value;
+      document.getElementById("previewPhone").textContent = "Phone: " + document.getElementById("phone").value;
+      document.getElementById("previewAddress").textContent = "Address: " + document.getElementById("address").value;
+      document.getElementById("previewDept").textContent = "Dept: " + document.getElementById("dept").value;
+
+      const previewPhoto = document.getElementById("previewPhoto");
+      previewPhoto.src = photoURL;
+      previewPhoto.classList.remove("hidden");
+    }
 
     function downloadCard() {
-      html2canvas(document.querySelector("#card")).then(canvas => {
-        const link = document.createElement('a');
-        link.download = 'id_card.png';
+      html2canvas(document.querySelector("#preview")).then(canvas => {
+        const link = document.createElement("a");
+        link.download = "id_card.png";
         link.href = canvas.toDataURL();
         link.click();
       });
     }
-  </script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-</body>
+
+    function extractTextFromDoc() {
+      const file = document.getElementById("docUpload").files[0];
+      if (!file) return;
+
+      Tesseract.recognize(file, 'eng').then(({ data: { text } }) => {
+        console.log("OCR Text:", text);
+        const nameMatch = text.match(/Name[:\s]*([A-Za-z\s]+)/);
+        const rollMatch = text.match(/Roll(?:\s*No)?[:\s]*(\w+)/);
+        const deptMatch = text.match(/Dept(?:artment)?[:\s]*([A-Za-z\s]+)/);
+        const dobMatch = text.match(/DOB[:\s]*([\d\/-]+)/);
+        const classMatch = text.match(/Class[:\s]*([A-Za-z0-9]+)/);
+        const fatherMatch = text.match(/Father[:\s]*([A-Za-z\s]+)/);
+        const phoneMatch = text.match(/Phone[:\s]*(\d{10,})/);
+        const addressMatch = text.match(/Address[:\s]*([\w\s,]+)/);
+
+        if (nameMatch) document.getElementById("name").value = nameMatch[1].trim();
+        if (rollMatch) document.getElementById("roll").value = rollMatch[1].trim();
+        if (dobMatch) document.getElementById("dob").value = dobMatch[1].trim();
+        if (classMatch) document.getElementById("class").value = classMatch[1].trim();
+        if (fatherMatch) document.getElementById("father").value = fatherMatch[1].trim();
+        if (phoneMatch) document.getElementById("phone").value = phoneMatch[1].trim();
+        if (addressMatch) document.getElementById("address").value = addressMatch[1].trim();
+        if (deptMatch) document.getElementById("dept").value = deptMatch[1].trim();
+      }).catch(err => alert("OCR failed: " + err));
+    }
+  </script></body>
 </html>
