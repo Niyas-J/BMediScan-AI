@@ -12,7 +12,7 @@ os.environ["GLOG_minloglevel"] = "1"
 os.environ["GRPC_VERBOSITY"] = "ERROR"
 
 # Configure the Gemini API with the API key directly
-genai.configure(api_key=os.getenv('AIzaSyCUmLJgI-v4sv0cmFIm157u25fNlTGLbkk'))  # Replace with your actual Google API key
+genai.configure(api_key=('AIzaSyCUmLJgI-v4sv0cmFIm157u25fNlTGLbkk'))  # Replace with your actual Google API key
 
 # Initialize the Gemini model for multimodal (vision) analysis
 model = genai.GenerativeModel("gemini-2.0-flash")
