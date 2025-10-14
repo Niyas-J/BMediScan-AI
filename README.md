@@ -1,2 +1,2 @@
-# NS-site
-Official site of Darunnajath educational academy
+# MediScan-AI
+Official site of Medical Scanning And other reports
