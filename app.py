@@ -6,6 +6,8 @@ import json
 from streamlit_lottie import st_lottie
 import datetime
 import os
+import requests
+import time
 
 # Suppress unnecessary logging
 os.environ["GLOG_minloglevel"] = "1"
@@ -15,7 +17,12 @@ os.environ["GRPC_VERBOSITY"] = "ERROR"
 genai.configure(api_key=('AIzaSyCUmLJgI-v4sv0cmFIm157u25fNlTGLbkk'))  # Replace with your actual Google API key
 
 # Initialize the Gemini model for multimodal (vision) analysis
-model = genai.GenerativeModel("gemini-2.0-flash")
+model = genai.GenerativeModel(
+    "gemini-2.0-flash",
+    generation_config={
+        "response_mime_type": "application/json"
+    }
+)
 
 # Function to load Lottie animation from URL
 def load_lottieurl(url: str):
@@ -267,22 +274,34 @@ with col_left:
     st.subheader("Scan Upload & Analysis")
     uploaded_image = st.file_uploader("Upload Body Scan Image", type=["jpg", "png", "jpeg"])
 
-    st.sidebar.header("Health Metrics Input")
-    temperature = st.sidebar.text_input("Temperature (e.g., 98.6°F)", "")
-    weight = st.sidebar.text_input("Weight (e.g., 70 kg)", "")
-    height = st.sidebar.text_input("Height (e.g., 170 cm)", "")
-    symptoms = st.sidebar.text_area("Additional Symptoms or Notes", "")
+    with st.sidebar.form("metrics_form"):
+        st.sidebar.header("Health Metrics Input")
+        temperature = st.text_input("Temperature (e.g., 98.6°F)", "", key="temperature")
+        weight = st.text_input("Weight (e.g., 70 kg)", "", key="weight")
+        height = st.text_input("Height (e.g., 170 cm)", "", key="height")
+        symptoms = st.text_area("Additional Symptoms or Notes", "", key="symptoms")
+        heart_rate = st.text_input("Heart Rate (bpm)", "", key="heart_rate")
+        blood_pressure = st.text_input("Blood Pressure (e.g., 120/80)", "", key="blood_pressure")
+        respiratory_rate = st.text_input("Respiratory Rate (breaths/min)", "", key="respiratory_rate")
+        oxygen_saturation = st.text_input("Oxygen Saturation (SpO2 %)", "", key="oxygen_saturation")
+        glucose_level = st.text_input("Glucose Level (mg/dL)", "", key="glucose_level")
+        cholesterol_level = st.text_input("Cholesterol Level (mg/dL)", "", key="cholesterol_level")
+        submit_metrics = st.form_submit_button("Analyze Scan")
 
-    if st.button("Analyze Scan"):
+    if submit_metrics:
         if not uploaded_image:
             st.error("Please upload an image.")
         elif not all([temperature, weight, height]):
             st.error("Please fill in all health measure fields.")
         else:
-            with st.spinner("Analyzing with AI... Please wait."):
-                try:
+            status = st.status("Analyzing scan...", expanded=True)
+            progress = st.progress(0)
+            status.update(label="Preparing image...", state="running")
+            progress.progress(10)
+            try:
                     img = Image.open(uploaded_image)
                     width, height = img.size
+                    progress.progress(20)
 
                     health_data = f"""
                     Temperature: {temperature}
@@ -291,43 +310,86 @@ with col_left:
                     Symptoms: {symptoms}
                     """
 
+                    status.update(label="Building prompt...", state="running")
+                    progress.progress(35)
                     prompt = f"""
-                    Analyze this body scan image for any anomalies, infections, or virus indicators.
-                    Consider the following health measures: {health_data}
+                    You are a careful, conservative medical assistant. Analyze this body scan image for anomalies, infections, or other findings.
+                    Use the provided health measures for context: {health_data}
 
-                    For each detected anomaly:
-                    - Provide a name (e.g., "Pneumonia in left lung")
-                    - Detailed reading/description of the anomaly
-                    - Research-backed explanation (cite general medical knowledge or studies briefly)
-                    - Suggestions for treatment or next steps
+                    Requirements:
+                    - Be specific and conservative; avoid overconfident claims.
+                    - Return well-structured JSON that downstream tools can parse.
+                    - Include severity and confidence for each anomaly.
+                    - Prefer measurable observations and classical radiology descriptors when applicable.
 
-                    If no anomalies are detected, return an empty list for anomalies.
+                    Bounding boxes:
+                    - Image size is {width}x{height} pixels.
+                    - Format each bounding box as [x1, y1, x2, y2].
+                    - Provide either a single "bbox" or a list "bboxes" when multiple regions exist.
 
-                    Also, for each anomaly, suggest a bounding box to highlight the area in the image.
-                    Image size is {width}x{height} pixels. Bounding box format: [x1, y1, x2, y2] where (x1,y1) is top-left, (x2,y2) is bottom-right, in pixels.
-                    Make bounding boxes approximate based on visual analysis.
-
-                    Output strictly in JSON format:
+                    Output strictly in JSON format (no extra text):
                     {{
-                        "anomalies": [
-                            {{
-                                "name": "string",
-                                "description": "string",
-                                "explanation": "string",
-                                "suggestion": "string",
-                                "bbox": [int, int, int, int]
-                            }}
-                        ]
+                      "overall_summary": {{
+                        "summary": "string",
+                        "triage": "none | routine | urgent | emergency",
+                        "next_steps": ["string"],
+                        "disclaimer": "string"
+                      }},
+                      "anomalies": [
+                        {{
+                          "name": "string",
+                          "likely_condition": "string",
+                          "severity": "low | moderate | high",
+                          "confidence": 0.0,
+                          "description": "string",
+                          "measurements": {{"key": "value"}},
+                          "explanation": "string",
+                          "suggestion": "string",
+                          "differentials": ["string"],
+                          "citations": [{{"title": "string", "url": "string", "doi": "string", "year": 2020}}],
+                          "bbox": [int, int, int, int],
+                          "bboxes": [[int, int, int, int]]
+                        }}
+                      ]
                     }}
-                    Do not include any text outside the JSON.
                     """
 
+                    status.update(label="Calling AI model...", state="running")
+                    progress.progress(55)
                     response = model.generate_content([prompt, img])
-                    response_text = response.text.strip()
+
+                    raw_text = getattr(response, "text", "") or ""
+                    if not raw_text:
+                        try:
+                            assembled = []
+                            for cand in getattr(response, "candidates", []) or []:
+                                content = getattr(cand, "content", None)
+                                parts = getattr(content, "parts", []) if content else []
+                                for part in parts:
+                                    part_text = getattr(part, "text", None)
+                                    if part_text:
+                                        assembled.append(part_text)
+                            raw_text = "".join(assembled)
+                        except Exception:
+                            raw_text = ""
+
+                    status.update(label="Parsing model response...", state="running")
+                    progress.progress(70)
+                    response_text = (raw_text or "").strip()
+
+                    if response_text.startswith("```"):
+                        lines = response_text.splitlines()
+                        lines = [ln for ln in lines if not ln.strip().startswith("```")]
+                        response_text = "\n".join(lines).strip()
+
+                    if response_text and (not response_text.startswith("{") or not response_text.endswith("}")):
+                        start = response_text.find("{")
+                        end = response_text.rfind("}")
+                        if start != -1 and end != -1 and end > start:
+                            response_text = response_text[start:end+1]
 
                     try:
                         result = json.loads(response_text)
-                        # Check if response is valid and has 'anomalies' key
                         if not isinstance(result, dict) or "anomalies" not in result:
                             st.error("Invalid API response format. Expected JSON with 'anomalies' key.")
                             st.stop()
@@ -335,6 +397,8 @@ with col_left:
                         st.error(f"Error parsing API response: {str(e)}. Please try again.")
                         st.stop()
 
+                    status.update(label="Rendering metrics and annotations...", state="running")
+                    progress.progress(85)
                     st.subheader("Health Metrics Overview")
                     col1, col2, col3 = st.columns(3)
                     with col1:
@@ -353,9 +417,13 @@ with col_left:
                     draw = ImageDraw.Draw(annotated_img)
                     if "anomalies" in result and result["anomalies"]:
                         for anomaly in result["anomalies"]:
-                            if "bbox" in anomaly and len(anomaly["bbox"]) == 4:
+                            if "bbox" in anomaly and isinstance(anomaly["bbox"], list) and len(anomaly["bbox"]) == 4:
                                 bbox = tuple(anomaly["bbox"])
                                 draw.rectangle(bbox, outline="red", width=5)
+                            if "bboxes" in anomaly and isinstance(anomaly["bboxes"], list):
+                                for bb in anomaly["bboxes"]:
+                                    if isinstance(bb, list) and len(bb) == 4:
+                                        draw.rectangle(tuple(bb), outline="red", width=5)
 
                     img_byte_arr = io.BytesIO()
                     annotated_img.save(img_byte_arr, format='PNG')
@@ -363,23 +431,91 @@ with col_left:
 
                     st.image(img_byte_arr, caption="Annotated Body Scan (Anomalies Highlighted in Red)", use_column_width=True)
 
+                    overall = result.get("overall_summary", {}) if isinstance(result, dict) else {}
+                    if overall:
+                        triage = overall.get("triage", "none")
+                        triage_color = {
+                            "none": "#6c757d",
+                            "routine": "#0d6efd",
+                            "urgent": "#fd7e14",
+                            "emergency": "#dc3545",
+                        }.get(str(triage).lower(), "#6c757d")
+                        st.markdown(f"<div class='pop-in' style='padding:10px;border-radius:8px;background: rgba(255,255,255,0.1);'>"
+                                    f"<span style='background:{triage_color};padding:4px 8px;border-radius:6px;color:white;font-weight:600;'>Triage: {triage.title()}</span>"
+                                    f"<div style='margin-top:8px;'>{overall.get('summary','')}</div>"
+                                    f"</div>", unsafe_allow_html=True)
+                        next_steps = overall.get("next_steps", [])
+                        if next_steps:
+                            st.markdown("**Recommended Next Steps**")
+                            for step in next_steps:
+                                st.markdown(f"- {step}")
+                        if overall.get("disclaimer"):
+                            st.caption(overall.get("disclaimer"))
+
                     st.subheader("Analysis Results")
                     if "anomalies" in result and result["anomalies"]:
                         for i, anomaly in enumerate(result["anomalies"], 1):
-                            with st.expander(f"Anomaly {i}: {anomaly.get('name', 'Unnamed')}"):
+                            header = anomaly.get('name', 'Unnamed')
+                            severity = str(anomaly.get('severity','')).title()
+                            confidence = anomaly.get('confidence')
+                            likely_condition = anomaly.get('likely_condition')
+                            with st.expander(f"Anomaly {i}: {header}"):
+                                tags = []
+                                if severity:
+                                    tags.append(f"<span style='background:#6f42c1;color:white;padding:2px 8px;border-radius:6px;margin-right:6px;'>Severity: {severity}</span>")
+                                if isinstance(confidence, (int, float)):
+                                    pct = max(0, min(100, int(round(confidence * 100))))
+                                    tags.append(f"<span style='background:#198754;color:white;padding:2px 8px;border-radius:6px;margin-right:6px;'>Confidence: {pct}%</span>")
+                                if likely_condition:
+                                    tags.append(f"<span style='background:#0d6efd;color:white;padding:2px 8px;border-radius:6px;margin-right:6px;'>Likely: {likely_condition}</span>")
+                                if tags:
+                                    st.markdown(" ".join(tags), unsafe_allow_html=True)
+
                                 st.markdown("**Description**")
                                 st.write(anomaly.get("description", "N/A"))
+
+                                measurements = anomaly.get("measurements", {})
+                                if isinstance(measurements, dict) and measurements:
+                                    st.markdown("**Measurements**")
+                                    for k, v in measurements.items():
+                                        st.write(f"- {k}: {v}")
+
+                                differentials = anomaly.get("differentials", [])
+                                if isinstance(differentials, list) and differentials:
+                                    st.markdown("**Differential Diagnoses**")
+                                    for d in differentials:
+                                        st.write(f"- {d}")
+
                                 st.markdown("**Research-Backed Explanation**")
                                 st.write(anomaly.get("explanation", "N/A"))
+
                                 st.markdown("**Suggestions**")
                                 st.write(anomaly.get("suggestion", "N/A"))
+
+                                citations = anomaly.get("citations", [])
+                                if isinstance(citations, list) and citations:
+                                    st.markdown("**Citations**")
+                                    for c in citations:
+                                        title = c.get("title", "Reference") if isinstance(c, dict) else str(c)
+                                        url = c.get("url") if isinstance(c, dict) else None
+                                        year = c.get("year") if isinstance(c, dict) else None
+                                        label = f"{title} ({year})" if year else title
+                                        if url:
+                                            st.markdown(f"- [{label}]({url})")
+                                        else:
+                                            st.markdown(f"- {label}")
                     else:
                         st.success("No anomalies detected in the body scan based on the analysis.")
 
-                except genai.types.generation_types.BlockedPromptException:
+                    status.update(label="Analysis complete", state="complete")
+                    progress.progress(100)
+
+            except genai.types.generation_types.BlockedPromptException:
                     st.error("API request blocked due to content policy. Please ensure the image and inputs are appropriate (e.g., valid medical scan, no sensitive content).")
-                except Exception as e:
+                    status.update(label="Request blocked", state="error")
+            except Exception as e:
                     st.error(f"An error occurred during analysis: {str(e)}. Please check your API key or try a different image.")
+                    status.update(label="Analysis failed", state="error")
 
 with col_right:
     st.markdown('<div class="vertical-section pop-in">', unsafe_allow_html=True)
