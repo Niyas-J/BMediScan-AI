@@ -8,13 +8,21 @@ import datetime
 import os
 import requests
 import time
+st.set_page_config(page_title="MediScan AI", page_icon="🩺", layout="wide", initial_sidebar_state="expanded")
+
+# External links
+GITHUB_REPO_URL = "https://github.com/your-org/mediscan-ai"
+DOCS_URL = "https://your-org.github.io/mediscan-ai"
+DEPLOY_GUIDE_URL = "https://github.com/your-org/mediscan-ai#deployment"
 
 # Suppress unnecessary logging
 os.environ["GLOG_minloglevel"] = "1"
 os.environ["GRPC_VERBOSITY"] = "ERROR"
 
-# Configure the Gemini API with the API key directly
-genai.configure(api_key=('AIzaSyCUmLJgI-v4sv0cmFIm157u25fNlTGLbkk'))  # Replace with your actual Google API key
+# Configure the Gemini API with the API key
+import os
+api_key = os.getenv('GOOGLE_API_KEY', 'AIzaSyDfJIP9725T8ndZu23sFJ5-cY4NrVoM4Wk')
+genai.configure(api_key=api_key)
 
 # Initialize the Gemini model for multimodal (vision) analysis
 model = genai.GenerativeModel(
@@ -47,6 +55,7 @@ elif not st_lottie:
 # Custom CSS and JavaScript for full window screen, Huly.io-inspired background, auto color contrast, and hover animations
 st.markdown("""
 <style>
+    html, body, .stApp { height: 100%; }
     .stApp {
         background-image: linear-gradient(rgba(0, 26, 51, 0.6), rgba(0, 26, 51, 0.6)), url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
         background-size: cover;
@@ -138,20 +147,32 @@ st.markdown("""
         background-color: rgba(0, 26, 51, 0.7);
         color: white;
     }
+    /* Make images fluid */
+    .stImage img { max-width: 100%; height: auto; }
+    /* Stack columns on small screens */
+    @media (max-width: 1024px) {
+        .main-header { font-size: 2.5rem; padding: 16px; }
+        .stButton > button { width: 100%; }
+    }
     @media (max-width: 768px) {
         .main-header {
             font-size: 2rem;
         }
-        .vertical-section {
-            height: auto;
-            width: 100%;
-        }
+        .vertical-section { height: auto; width: 100%; }
         .stApp {
             padding: 10px;
         }
         .hover-text .popup {
             display: none;
         }
+        [data-testid="column"] { width: 100% !important; flex: 1 0 100% !important; }
+        section[data-testid="stSidebar"] { width: 100%; }
+    }
+    @media (max-width: 576px) {
+        .main-header { font-size: 1.6rem; padding: 12px; }
+        .stButton > button { padding: 10px 12px; font-size: 0.95rem; }
+        .stTextInput > div > div > input { font-size: 0.95rem; }
+        [data-testid="stMarkdownContainer"] p { font-size: 0.95rem; }
     }
     [data-testid="stMarkdownContainer"] p, [data-testid="stMarkdownContainer"] h1, [data-testid="stMarkdownContainer"] h2, [data-testid="stMarkdownContainer"] h3 {
         color: #ffffff !important;
@@ -287,6 +308,7 @@ with col_left:
         glucose_level = st.text_input("Glucose Level (mg/dL)", "", key="glucose_level")
         cholesterol_level = st.text_input("Cholesterol Level (mg/dL)", "", key="cholesterol_level")
         submit_metrics = st.form_submit_button("Analyze Scan")
+
 
     if submit_metrics:
         if not uploaded_image:
@@ -535,14 +557,20 @@ with col_right:
 st.header("💡 Get Started with MediScan AI")
 col_btn1, col_btn2, col_btn3 = st.columns(3)
 with col_btn1:
-    if st.button("🌟 Star on GitHub"):
-        st.info("Redirecting to GitHub... (Placeholder)")
+    if hasattr(st, "link_button"):
+        st.link_button("🌟 Star on GitHub", GITHUB_REPO_URL, use_container_width=True)
+    else:
+        st.markdown(f"<a href='{GITHUB_REPO_URL}' target='_blank' rel='noopener noreferrer' class='pop-in' style='display:inline-block;background:#24292f;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;'>🌟 Star on GitHub</a>", unsafe_allow_html=True)
 with col_btn2:
-    if st.button("📖 Documentation"):
-        st.info("Opening docs... (Placeholder)")
+    if hasattr(st, "link_button"):
+        st.link_button("📖 Documentation", DOCS_URL, use_container_width=True)
+    else:
+        st.markdown(f"<a href='{DOCS_URL}' target='_blank' rel='noopener noreferrer' class='pop-in' style='display:inline-block;background:#0d6efd;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;'>📖 Documentation</a>", unsafe_allow_html=True)
 with col_btn3:
-    if st.button("🚀 Deploy Now"):
-        st.info("Deployment guide... (Placeholder)")
+    if hasattr(st, "link_button"):
+        st.link_button("🚀 Deploy Now", DEPLOY_GUIDE_URL, use_container_width=True)
+    else:
+        st.markdown(f"<a href='{DEPLOY_GUIDE_URL}' target='_blank' rel='noopener noreferrer' class='pop-in' style='display:inline-block;background:#20c997;color:#001a33;padding:10px 16px;border-radius:8px;text-decoration:none;'>🚀 Deploy Now</a>", unsafe_allow_html=True)
 
 st.markdown("---")
 st.markdown("""
