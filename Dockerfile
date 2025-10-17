@@ -16,6 +16,7 @@ COPY . .
 
 EXPOSE 3000
 
-CMD streamlit run app.py --server.port=${PORT} --server.address=0.0.0.0
+# Use shell to expand PORT at runtime, default to 3000 if not set
+CMD sh -c "streamlit run app.py --server.port=${PORT:-3000} --server.address=0.0.0.0"
 
 
