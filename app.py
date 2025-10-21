@@ -9,9 +9,6 @@ import os
 import requests
 import time
 import re
-from streamlit_webrtc import webrtc_streamer, VideoTransformerBase, RTCConfiguration
-import av
-import numpy as np
 
 st.set_page_config(page_title="MediScan AI", page_icon="🩺", layout="wide", initial_sidebar_state="expanded")
 
