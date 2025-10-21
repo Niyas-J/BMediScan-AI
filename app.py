@@ -277,19 +277,110 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Centered bold main heading with background template
-st.markdown('<h1 class="main-header pop-in">MediScan AI - Revolutionary Medical Diagnostic Platform</h1>', unsafe_allow_html=True)
+st.markdown('<h1 class="main-header pop-in">🏥 MediScan AI - Medical Diagnostic Platform</h1>', unsafe_allow_html=True)
 
 st.markdown("""
-<div class="pop-in">
-<p style="text-align: center; color: inherit; font-size: 1.2rem;">
-MediScan AI is an innovative, AI-powered medical diagnostic tool that analyzes body scan images using advanced Google Gemini API integration. 
-It detects anomalies, infections, and virus indicators with precision, providing research-backed explanations and personalized suggestions.
-Inspired by cutting-edge platforms like Huly.io, our dashboard offers seamless collaboration, real-time insights, and user-friendly workflows for healthcare professionals and patients.
+<div class="pop-in" style="text-align: center; margin-bottom: 30px;">
+<p style="color: inherit; font-size: 1.1rem; max-width: 800px; margin: 0 auto;">
+AI-powered medical diagnostic tool that analyzes body scans using advanced Google Gemini API. 
+Get instant anomaly detection with research-backed explanations and personalized treatment suggestions.
 </p>
 </div>
 """, unsafe_allow_html=True)
 
-# Project Info Section
+# Upload Section at Top
+st.markdown("---")
+st.markdown('<h2 style="text-align: center; color: white; margin: 20px 0;">📸 Upload & Analyze Medical Scans</h2>', unsafe_allow_html=True)
+
+# Tabs for upload methods
+tab1, tab2, tab3 = st.tabs(["📁 Upload Image", "📷 Capture from Camera", "📄 Upload Report (Auto-fill)"])
+
+uploaded_image = None
+
+with tab1:
+    st.info("📁 Upload a body scan image for AI analysis")
+    uploaded_image = st.file_uploader("Choose a scan image", type=["jpg", "png", "jpeg"], key="file_upload", label_visibility="collapsed")
+
+with tab2:
+    st.info("📷 Use your device camera to capture a body scan")
+    camera_image = st.camera_input("Take a picture", label_visibility="collapsed")
+    if camera_image:
+        uploaded_image = camera_image
+
+with tab3:
+    st.info("📄 Upload a medical report (lab results, vitals) to auto-fill health metrics using AI")
+    report_image = st.file_uploader("Choose a medical report", 
+                                    type=["jpg", "png", "jpeg", "pdf"], key="report_upload", label_visibility="collapsed")
+    if report_image and st.button("🔍 Extract Health Metrics", use_container_width=True):
+        with st.spinner("🤖 Extracting health metrics from report..."):
+            try:
+                # Handle PDF files
+                if report_image.type == "application/pdf":
+                    try:
+                        from pdf2image import convert_from_bytes
+                        images = convert_from_bytes(report_image.read())
+                        report_img = images[0]
+                        st.success(f"📄 Processing PDF (page 1 of {len(images)})")
+                    except ImportError:
+                        st.error("PDF support requires 'pdf2image'. Please upload JPG/PNG instead.")
+                        report_img = None
+                else:
+                    report_img = Image.open(report_image)
+                
+                if report_img:
+                    extracted_data = extract_health_metrics_from_report(report_img)
+                    if extracted_data:
+                        st.session_state["auto_fill_data"] = extracted_data
+                        st.success("✅ Health metrics extracted! Check the sidebar form.")
+                        with st.expander("📊 View Extracted Data"):
+                            st.json(extracted_data)
+            except Exception as e:
+                st.error(f"Failed to process: {str(e)}. Try uploading JPG/PNG.")
+
+st.markdown("---")
+
+# Sidebar form for health metrics
+with st.sidebar.form("metrics_form"):
+    st.sidebar.header("🏥 Health Metrics Input")
+    st.caption("Fill manually or auto-fill by uploading a medical report above")
+    
+    # Get auto-filled data if available
+    auto_data = st.session_state.get("auto_fill_data", {})
+    
+    temperature = st.text_input("🌡️ Temperature", 
+                                auto_data.get("temperature", ""), 
+                                placeholder="e.g., 98.6°F", key="temperature")
+    weight = st.text_input("⚖️ Weight", 
+                          auto_data.get("weight", ""), 
+                          placeholder="e.g., 70 kg", key="weight")
+    height = st.text_input("📏 Height", 
+                          auto_data.get("height", ""), 
+                          placeholder="e.g., 170 cm", key="height")
+    heart_rate = st.text_input("❤️ Heart Rate", 
+                              auto_data.get("heart_rate", ""), 
+                              placeholder="e.g., 72 bpm", key="heart_rate")
+    blood_pressure = st.text_input("💉 Blood Pressure", 
+                                   auto_data.get("blood_pressure", ""), 
+                                   placeholder="e.g., 120/80", key="blood_pressure")
+    respiratory_rate = st.text_input("🫁 Respiratory Rate", 
+                                     auto_data.get("respiratory_rate", ""), 
+                                     placeholder="e.g., 16/min", key="respiratory_rate")
+    oxygen_saturation = st.text_input("🩺 Oxygen Saturation", 
+                                      auto_data.get("oxygen_saturation", ""), 
+                                      placeholder="e.g., 98%", key="oxygen_saturation")
+    glucose_level = st.text_input("🍬 Glucose Level", 
+                                  auto_data.get("glucose_level", ""), 
+                                  placeholder="e.g., 90 mg/dL", key="glucose_level")
+    cholesterol_level = st.text_input("🧪 Cholesterol", 
+                                      auto_data.get("cholesterol_level", ""), 
+                                      placeholder="e.g., 180 mg/dL", key="cholesterol_level")
+    symptoms = st.text_area("📝 Symptoms/Notes", 
+                           auto_data.get("symptoms", ""), 
+                           placeholder="Any additional symptoms...", key="symptoms")
+    
+    submit_metrics = st.form_submit_button("🔬 Analyze Scan", use_container_width=True)
+
+# Project Info Section (moved down)
 st.header("🚀 Project Overview")
 col1, col2 = st.columns(2)
 with col1:
@@ -359,119 +450,35 @@ with col4:
 
 st.info("**Bird Flu Alert**: Ongoing H5N1 outbreaks in U.S. dairy/poultry (3 human cases in 2025); monitor for emerging risks (Source: CDC, Oct 2025).")
 
-# Demo Section
-st.header("🩺 Try MediScan AI Demo")
-st.markdown("""
-Like Huly's seamless integration of tools, dive into our diagnostic feature below.
-Upload a scan and get AI-powered insights instantly.
-""")
+st.markdown("---")
 
-col_left, col_right = st.columns([3, 1])
+# Analysis Section
+if submit_metrics:
+    if not uploaded_image:
+        st.error("⚠️ Please upload an image first using one of the tabs above.")
+    elif not all([temperature, weight, height]):
+        st.error("⚠️ Please fill in at least Temperature, Weight, and Height.")
+    else:
+        status = st.status("Analyzing scan...", expanded=True)
+        progress = st.progress(0)
+        status.update(label="Preparing image...", state="running")
+        progress.progress(10)
+        try:
+            img = Image.open(uploaded_image)
+            width, height = img.size
+            progress.progress(20)
 
-with col_left:
-    st.subheader("📸 Scan Upload & Analysis")
-    
-    # Tabs for upload methods
-    tab1, tab2, tab3 = st.tabs(["📁 Upload Image", "📷 Capture from Camera", "📄 Upload Medical Report (Auto-fill)"])
-    
-    uploaded_image = None
-    
-    with tab1:
-        uploaded_image = st.file_uploader("Upload Body Scan Image", type=["jpg", "png", "jpeg"], key="file_upload")
-    
-    with tab2:
-        st.info("📷 Use your device camera to capture a body scan image")
-        camera_image = st.camera_input("Take a picture")
-        if camera_image:
-            uploaded_image = camera_image
-    
-    with tab3:
-        st.info("📄 Upload a medical report and we'll auto-fill your health metrics using AI")
-        report_image = st.file_uploader("Upload Medical Report (Lab Results, Vitals Chart, etc.)", 
-                                        type=["jpg", "png", "jpeg", "pdf"], key="report_upload")
-        if report_image and st.button("🔍 Extract Health Metrics from Report"):
-            with st.spinner("Extracting health metrics from report..."):
-                try:
-                    # Handle PDF files
-                    if report_image.type == "application/pdf":
-                        try:
-                            from pdf2image import convert_from_bytes
-                            # Convert PDF to images
-                            images = convert_from_bytes(report_image.read())
-                            report_img = images[0]  # Use first page
-                            st.info(f"📄 Processing PDF (page 1 of {len(images)})")
-                        except ImportError:
-                            st.error("PDF support requires 'pdf2image' library. Please upload an image file (JPG/PNG) instead.")
-                            report_img = None
-                    else:
-                        # Handle image files
-                        report_img = Image.open(report_image)
-                    
-                    if report_img:
-                        extracted_data = extract_health_metrics_from_report(report_img)
-                        if extracted_data:
-                            st.session_state["auto_fill_data"] = extracted_data
-                            st.success("✅ Health metrics extracted! Check the sidebar form.")
-                            st.json(extracted_data)
-                except Exception as e:
-                    st.error(f"Failed to process file: {str(e)}. Please try uploading a JPG/PNG image instead.")
+            health_data = f"""
+            Temperature: {temperature}
+            Weight: {weight}
+            Height: {height}
+            Symptoms: {symptoms}
+            """
 
-    with st.sidebar.form("metrics_form"):
-        st.sidebar.header("🏥 Health Metrics Input")
-        
-        # Get auto-filled data if available
-        auto_data = st.session_state.get("auto_fill_data", {})
-        
-        temperature = st.text_input("🌡️ Temperature (e.g., 98.6°F)", 
-                                    auto_data.get("temperature", ""), key="temperature")
-        weight = st.text_input("⚖️ Weight (e.g., 70 kg)", 
-                              auto_data.get("weight", ""), key="weight")
-        height = st.text_input("📏 Height (e.g., 170 cm)", 
-                              auto_data.get("height", ""), key="height")
-        heart_rate = st.text_input("❤️ Heart Rate (bpm)", 
-                                  auto_data.get("heart_rate", ""), key="heart_rate")
-        blood_pressure = st.text_input("💉 Blood Pressure (e.g., 120/80)", 
-                                       auto_data.get("blood_pressure", ""), key="blood_pressure")
-        respiratory_rate = st.text_input("🫁 Respiratory Rate (breaths/min)", 
-                                         auto_data.get("respiratory_rate", ""), key="respiratory_rate")
-        oxygen_saturation = st.text_input("🩺 Oxygen Saturation (SpO2 %)", 
-                                          auto_data.get("oxygen_saturation", ""), key="oxygen_saturation")
-        glucose_level = st.text_input("🍬 Glucose Level (mg/dL)", 
-                                      auto_data.get("glucose_level", ""), key="glucose_level")
-        cholesterol_level = st.text_input("🧪 Cholesterol Level (mg/dL)", 
-                                          auto_data.get("cholesterol_level", ""), key="cholesterol_level")
-        symptoms = st.text_area("📝 Additional Symptoms or Notes", 
-                               auto_data.get("symptoms", ""), key="symptoms")
-        
-        submit_metrics = st.form_submit_button("🔬 Analyze Scan", use_container_width=True)
-
-
-    if submit_metrics:
-        if not uploaded_image:
-            st.error("Please upload an image.")
-        elif not all([temperature, weight, height]):
-            st.error("Please fill in all health measure fields.")
-        else:
-            status = st.status("Analyzing scan...", expanded=True)
-            progress = st.progress(0)
-            status.update(label="Preparing image...", state="running")
-            progress.progress(10)
-            try:
-                    img = Image.open(uploaded_image)
-                    width, height = img.size
-                    progress.progress(20)
-
-                    health_data = f"""
-                    Temperature: {temperature}
-                    Weight: {weight}
-                    Height: {height}
-                    Symptoms: {symptoms}
-                    """
-
-                    status.update(label="Building prompt...", state="running")
-                    progress.progress(35)
-                    prompt = f"""
-                    You are a careful, conservative medical assistant. Analyze this body scan image for anomalies, infections, or other findings.
+            status.update(label="Building prompt...", state="running")
+            progress.progress(35)
+            prompt = f"""
+            You are a careful, conservative medical assistant. Analyze this body scan image for anomalies, infections, or other findings.
                     Use the provided health measures for context: {health_data}
 
                     Requirements:
