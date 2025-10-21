@@ -94,28 +94,29 @@ def extract_health_metrics_from_report(image):
         st.error(f"Failed to extract metrics: {str(e)}")
         return {}
 
-# Custom CSS for beautiful UI with medical-themed gradients and animations
+# Custom CSS for Vasolabs-inspired medical device UI
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
     
     html, body, .stApp { 
         height: 100%; 
-        font-family: 'Inter', sans-serif;
+        font-family: 'Poppins', sans-serif;
     }
+    
+    /* Dark medical theme background */
     .stApp {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
-        background-size: 400% 400%;
-        animation: gradientShift 15s ease infinite;
+        background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0f1419 100%);
         min-height: 100vh;
         width: 100vw;
         margin: 0;
         padding: 0;
         overflow-x: hidden;
-        color: #ffffff;
+        color: #e8eaf0;
         position: relative;
     }
     
+    /* Subtle grid overlay for medical device feel */
     .stApp::before {
         content: '';
         position: fixed;
@@ -124,34 +125,63 @@ st.markdown("""
         width: 100%;
         height: 100%;
         background-image: 
-            url('https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=1920&q=80'),
-            linear-gradient(135deg, rgba(102, 126, 234, 0.9) 0%, rgba(118, 75, 162, 0.9) 100%);
-        background-blend-mode: overlay;
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
-        z-index: -1;
-        opacity: 0.95;
+            repeating-linear-gradient(0deg, transparent, transparent 50px, rgba(100, 200, 255, 0.03) 50px, rgba(100, 200, 255, 0.03) 51px),
+            repeating-linear-gradient(90deg, transparent, transparent 50px, rgba(100, 200, 255, 0.03) 50px, rgba(100, 200, 255, 0.03) 51px);
+        z-index: 0;
+        pointer-events: none;
     }
     
-    @keyframes gradientShift {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
+    /* Glowing accent lines */
+    .stApp::after {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: linear-gradient(90deg, #00d4ff 0%, #7b2cbf 50%, #00d4ff 100%);
+        box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+        z-index: 1000;
     }
+    /* Medical device header */
     .main-header {
         text-align: center;
-        font-weight: 700;
-        font-size: 3.5rem;
-        color: #ffffff;
-        text-shadow: 0 4px 12px rgba(0,0,0,0.3), 0 0 40px rgba(102, 126, 234, 0.5);
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.95) 0%, rgba(118, 75, 162, 0.95) 100%);
-        padding: 40px 20px;
-        border-radius: 20px;
-        margin-bottom: 30px;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        font-weight: 600;
+        font-size: 2.5rem;
+        color: #00d4ff;
+        text-shadow: 0 0 30px rgba(0, 212, 255, 0.5);
+        background: rgba(15, 20, 35, 0.8);
+        padding: 30px 20px;
+        border-radius: 0;
+        margin-bottom: 0;
+        border-bottom: 2px solid rgba(0, 212, 255, 0.3);
+        backdrop-filter: blur(20px);
+        position: relative;
+        z-index: 10;
+    }
+    
+    /* Medical card containers */
+    .medical-card {
+        background: rgba(20, 25, 45, 0.7);
+        border: 1px solid rgba(0, 212, 255, 0.2);
+        border-radius: 12px;
+        padding: 20px;
+        margin: 15px 0;
         backdrop-filter: blur(10px);
-        border: 1px solid rgba(255,255,255,0.2);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        position: relative;
+        z-index: 1;
+    }
+    
+    .medical-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #00d4ff, transparent);
+        opacity: 0.5;
     }
     .pop-in {
         animation: popIn 0.5s ease-out;
@@ -160,35 +190,65 @@ st.markdown("""
         from { transform: scale(0.8); opacity: 0; }
         to { transform: scale(1); opacity: 1; }
     }
+    /* Medical device buttons */
     .stButton > button {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #00d4ff 0%, #7b2cbf 100%);
         color: white;
-        border-radius: 12px;
-        border: none;
-        padding: 12px 24px;
-        font-weight: 600;
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        border-radius: 8px;
+        border: 1px solid rgba(0, 212, 255, 0.3);
+        padding: 12px 32px;
+        font-weight: 500;
+        font-size: 0.95rem;
+        box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
         transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 1px;
     }
     .stButton > button:hover {
-        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-        transform: translateY(-2px) scale(1.02);
-        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        background: linear-gradient(135deg, #7b2cbf 0%, #00d4ff 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 0 30px rgba(0, 212, 255, 0.6);
+        border-color: #00d4ff;
     }
-    .stTextInput > div > div > input {
-        border-radius: 8px;
-        border: 1px solid #ccc;
-        transition: border-color 0.3s, transform 0.2s;
+    /* Input fields with medical device styling */
+    .stTextInput > div > div > input, .stTextArea > div > div > textarea {
+        background: rgba(15, 20, 35, 0.6);
+        border: 1px solid rgba(0, 212, 255, 0.2);
+        border-radius: 6px;
+        color: #e8eaf0;
+        padding: 12px;
+        transition: all 0.3s ease;
     }
-    .stTextInput > div > div > input:focus {
-        border-color: #00c4cc;
-        transform: scale(1.02);
+    .stTextInput > div > div > input:focus, .stTextArea > div > div > textarea:focus {
+        border-color: #00d4ff;
+        box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+        background: rgba(15, 20, 35, 0.8);
     }
     .stExpander {
         border-radius: 8px;
-        border: 1px solid #ddd;
-        background-color: rgba(255, 255, 255, 0.1);
-        color: #ffffff;
+        border: 1px solid rgba(0, 212, 255, 0.2);
+        background-color: rgba(20, 25, 45, 0.5);
+        color: #e8eaf0;
+    }
+    
+    /* Tabs styling */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background-color: rgba(15, 20, 35, 0.6);
+        padding: 10px;
+        border-radius: 10px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        background-color: transparent;
+        border: 1px solid rgba(0, 212, 255, 0.2);
+        color: #00d4ff;
+        border-radius: 6px;
+        padding: 10px 20px;
+    }
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(123, 44, 191, 0.2));
+        border-color: #00d4ff;
+        box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
     }
     .hover-text {
         position: relative;
@@ -220,9 +280,35 @@ st.markdown("""
         visibility: visible;
         opacity: 1;
     }
+    /* Sidebar medical device styling */
     section[data-testid="stSidebar"] {
-        background-color: rgba(0, 26, 51, 0.7);
-        color: white;
+        background: linear-gradient(180deg, rgba(10, 14, 39, 0.95) 0%, rgba(15, 20, 35, 0.95) 100%);
+        border-right: 2px solid rgba(0, 212, 255, 0.2);
+        color: #e8eaf0;
+    }
+    section[data-testid="stSidebar"] > div {
+        background-color: transparent;
+    }
+    
+    /* Metrics cards */
+    [data-testid="stMetric"] {
+        background: rgba(20, 25, 45, 0.6);
+        border: 1px solid rgba(0, 212, 255, 0.2);
+        border-radius: 8px;
+        padding: 15px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+    [data-testid="stMetricLabel"] {
+        color: #00d4ff !important;
+        font-weight: 500;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    [data-testid="stMetricValue"] {
+        color: #ffffff !important;
+        font-weight: 600;
+        font-size: 1.5rem;
     }
     /* Make images fluid */
     .stImage img { max-width: 100%; height: auto; }
@@ -276,21 +362,28 @@ st.markdown("""
 </script>
 """, unsafe_allow_html=True)
 
-# Centered bold main heading with background template
-st.markdown('<h1 class="main-header pop-in">🏥 MediScan AI - Medical Diagnostic Platform</h1>', unsafe_allow_html=True)
-
-st.markdown("""
-<div class="pop-in" style="text-align: center; margin-bottom: 30px;">
-<p style="color: inherit; font-size: 1.1rem; max-width: 800px; margin: 0 auto;">
-AI-powered medical diagnostic tool that analyzes body scans using advanced Google Gemini API. 
-Get instant anomaly detection with research-backed explanations and personalized treatment suggestions.
-</p>
+# Medical device header
+st.markdown('''
+<div class="main-header">
+    <div style="display: flex; align-items: center; justify-content: center; gap: 15px;">
+        <div style="width: 40px; height: 40px; border: 2px solid #00d4ff; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+            <div style="width: 20px; height: 20px; background: #00d4ff; border-radius: 50%; box-shadow: 0 0 15px #00d4ff;"></div>
+        </div>
+        <h1 style="margin: 0; font-size: 2.5rem; font-weight: 600;">MEDISCAN<span style="color: #7b2cbf;">AI</span></h1>
+    </div>
+    <p style="margin: 10px 0 0 0; font-size: 0.9rem; color: rgba(0, 212, 255, 0.7); letter-spacing: 3px;">MEDICAL DIAGNOSTIC SYSTEM v2.0</p>
 </div>
-""", unsafe_allow_html=True)
+''', unsafe_allow_html=True)
 
-# Upload Section at Top
-st.markdown("---")
-st.markdown('<h2 style="text-align: center; color: white; margin: 20px 0;">📸 Upload & Analyze Medical Scans</h2>', unsafe_allow_html=True)
+# Upload Section
+st.markdown('''
+<div style="text-align: center; padding: 30px 0 20px 0;">
+    <h2 style="color: #00d4ff; font-weight: 500; font-size: 1.8rem; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px;">
+        SCAN ACQUISITION INTERFACE
+    </h2>
+    <div style="width: 100px; height: 2px; background: linear-gradient(90deg, transparent, #00d4ff, transparent); margin: 0 auto;"></div>
+</div>
+''', unsafe_allow_html=True)
 
 # Tabs for upload methods
 tab1, tab2, tab3 = st.tabs(["📁 Upload Image", "📷 Capture from Camera", "📄 Upload Report (Auto-fill)"])
