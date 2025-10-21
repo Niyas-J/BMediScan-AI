@@ -8,6 +8,11 @@ import datetime
 import os
 import requests
 import time
+import re
+from streamlit_webrtc import webrtc_streamer, VideoTransformerBase, RTCConfiguration
+import av
+import numpy as np
+
 st.set_page_config(page_title="MediScan AI", page_icon="🩺", layout="wide", initial_sidebar_state="expanded")
 
 # External links
@@ -52,34 +57,104 @@ if st_lottie and lottie_medical:
 elif not st_lottie:
     st.warning("Lottie animation not available. Please install 'streamlit-lottie' with 'pip install streamlit-lottie'.")
 
-# Custom CSS and JavaScript for full window screen, Huly.io-inspired background, auto color contrast, and hover animations
+# OCR function to extract health metrics from uploaded reports
+def extract_health_metrics_from_report(image):
+    """Use Gemini Vision to extract health metrics from medical reports"""
+    try:
+        prompt = """
+        Extract all health metrics from this medical report image.
+        Look for: Temperature, Weight, Height, Heart Rate, Blood Pressure, 
+        Respiratory Rate, Oxygen Saturation (SpO2), Glucose Level, Cholesterol Level, and any symptoms.
+        
+        Return ONLY a JSON object with these fields (use empty string if not found):
+        {
+            "temperature": "value with unit",
+            "weight": "value with unit",
+            "height": "value with unit",
+            "heart_rate": "value",
+            "blood_pressure": "value",
+            "respiratory_rate": "value",
+            "oxygen_saturation": "value",
+            "glucose_level": "value",
+            "cholesterol_level": "value",
+            "symptoms": "any symptoms or notes"
+        }
+        """
+        response = model.generate_content([prompt, image])
+        raw_text = getattr(response, "text", "") or ""
+        if raw_text.startswith("```"):
+            lines = raw_text.splitlines()
+            lines = [ln for ln in lines if not ln.strip().startswith("```")]
+            raw_text = "\n".join(lines).strip()
+        
+        start = raw_text.find("{")
+        end = raw_text.rfind("}")
+        if start != -1 and end != -1:
+            raw_text = raw_text[start:end+1]
+        
+        return json.loads(raw_text)
+    except Exception as e:
+        st.error(f"Failed to extract metrics: {str(e)}")
+        return {}
+
+# Custom CSS for beautiful UI with medical-themed gradients and animations
 st.markdown("""
 <style>
-    html, body, .stApp { height: 100%; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+    
+    html, body, .stApp { 
+        height: 100%; 
+        font-family: 'Inter', sans-serif;
+    }
     .stApp {
-        background-image: linear-gradient(rgba(0, 26, 51, 0.6), rgba(0, 26, 51, 0.6)), url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
-        background-size: cover;
-        background-position: center;
-        background-repeat: no-repeat;
-        background-attachment: fixed;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
+        background-size: 400% 400%;
+        animation: gradientShift 15s ease infinite;
         min-height: 100vh;
         width: 100vw;
         margin: 0;
         padding: 0;
         overflow-x: hidden;
         color: #ffffff;
+        position: relative;
+    }
+    
+    .stApp::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: 
+            url('https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=1920&q=80'),
+            linear-gradient(135deg, rgba(102, 126, 234, 0.9) 0%, rgba(118, 75, 162, 0.9) 100%);
+        background-blend-mode: overlay;
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        z-index: -1;
+        opacity: 0.95;
+    }
+    
+    @keyframes gradientShift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
     }
     .main-header {
         text-align: center;
-        font-weight: bold;
-        font-size: 3rem;
+        font-weight: 700;
+        font-size: 3.5rem;
         color: #ffffff;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-        background: linear-gradient(rgba(0, 26, 51, 0.8), rgba(0, 26, 51, 0.8)), url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
-        background-size: cover;
-        padding: 20px;
-        border-radius: 10px;
-        margin-bottom: 20px;
+        text-shadow: 0 4px 12px rgba(0,0,0,0.3), 0 0 40px rgba(102, 126, 234, 0.5);
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.95) 0%, rgba(118, 75, 162, 0.95) 100%);
+        padding: 40px 20px;
+        border-radius: 20px;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.2);
     }
     .pop-in {
         animation: popIn 0.5s ease-out;
@@ -89,14 +164,19 @@ st.markdown("""
         to { transform: scale(1); opacity: 1; }
     }
     .stButton > button {
-        background-color: #00c4cc;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        border-radius: 8px;
-        transition: background-color 0.3s, transform 0.2s;
+        border-radius: 12px;
+        border: none;
+        padding: 12px 24px;
+        font-weight: 600;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        transition: all 0.3s ease;
     }
     .stButton > button:hover {
-        background-color: #0099a8;
-        transform: scale(1.05);
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        transform: translateY(-2px) scale(1.02);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
     }
     .stTextInput > div > div > input {
         border-radius: 8px;
@@ -292,22 +372,63 @@ Upload a scan and get AI-powered insights instantly.
 col_left, col_right = st.columns([3, 1])
 
 with col_left:
-    st.subheader("Scan Upload & Analysis")
-    uploaded_image = st.file_uploader("Upload Body Scan Image", type=["jpg", "png", "jpeg"])
+    st.subheader("📸 Scan Upload & Analysis")
+    
+    # Tabs for upload methods
+    tab1, tab2, tab3 = st.tabs(["📁 Upload Image", "📷 Capture from Camera", "📄 Upload Medical Report (Auto-fill)"])
+    
+    uploaded_image = None
+    
+    with tab1:
+        uploaded_image = st.file_uploader("Upload Body Scan Image", type=["jpg", "png", "jpeg"], key="file_upload")
+    
+    with tab2:
+        st.info("📷 Use your device camera to capture a body scan image")
+        camera_image = st.camera_input("Take a picture")
+        if camera_image:
+            uploaded_image = camera_image
+    
+    with tab3:
+        st.info("📄 Upload a medical report and we'll auto-fill your health metrics using AI")
+        report_image = st.file_uploader("Upload Medical Report (Lab Results, Vitals Chart, etc.)", 
+                                        type=["jpg", "png", "jpeg", "pdf"], key="report_upload")
+        if report_image and st.button("🔍 Extract Health Metrics from Report"):
+            with st.spinner("Extracting health metrics from report..."):
+                report_img = Image.open(report_image)
+                extracted_data = extract_health_metrics_from_report(report_img)
+                if extracted_data:
+                    st.session_state["auto_fill_data"] = extracted_data
+                    st.success("✅ Health metrics extracted! Check the sidebar form.")
+                    st.json(extracted_data)
 
     with st.sidebar.form("metrics_form"):
-        st.sidebar.header("Health Metrics Input")
-        temperature = st.text_input("Temperature (e.g., 98.6°F)", "", key="temperature")
-        weight = st.text_input("Weight (e.g., 70 kg)", "", key="weight")
-        height = st.text_input("Height (e.g., 170 cm)", "", key="height")
-        symptoms = st.text_area("Additional Symptoms or Notes", "", key="symptoms")
-        heart_rate = st.text_input("Heart Rate (bpm)", "", key="heart_rate")
-        blood_pressure = st.text_input("Blood Pressure (e.g., 120/80)", "", key="blood_pressure")
-        respiratory_rate = st.text_input("Respiratory Rate (breaths/min)", "", key="respiratory_rate")
-        oxygen_saturation = st.text_input("Oxygen Saturation (SpO2 %)", "", key="oxygen_saturation")
-        glucose_level = st.text_input("Glucose Level (mg/dL)", "", key="glucose_level")
-        cholesterol_level = st.text_input("Cholesterol Level (mg/dL)", "", key="cholesterol_level")
-        submit_metrics = st.form_submit_button("Analyze Scan")
+        st.sidebar.header("🏥 Health Metrics Input")
+        
+        # Get auto-filled data if available
+        auto_data = st.session_state.get("auto_fill_data", {})
+        
+        temperature = st.text_input("🌡️ Temperature (e.g., 98.6°F)", 
+                                    auto_data.get("temperature", ""), key="temperature")
+        weight = st.text_input("⚖️ Weight (e.g., 70 kg)", 
+                              auto_data.get("weight", ""), key="weight")
+        height = st.text_input("📏 Height (e.g., 170 cm)", 
+                              auto_data.get("height", ""), key="height")
+        heart_rate = st.text_input("❤️ Heart Rate (bpm)", 
+                                  auto_data.get("heart_rate", ""), key="heart_rate")
+        blood_pressure = st.text_input("💉 Blood Pressure (e.g., 120/80)", 
+                                       auto_data.get("blood_pressure", ""), key="blood_pressure")
+        respiratory_rate = st.text_input("🫁 Respiratory Rate (breaths/min)", 
+                                         auto_data.get("respiratory_rate", ""), key="respiratory_rate")
+        oxygen_saturation = st.text_input("🩺 Oxygen Saturation (SpO2 %)", 
+                                          auto_data.get("oxygen_saturation", ""), key="oxygen_saturation")
+        glucose_level = st.text_input("🍬 Glucose Level (mg/dL)", 
+                                      auto_data.get("glucose_level", ""), key="glucose_level")
+        cholesterol_level = st.text_input("🧪 Cholesterol Level (mg/dL)", 
+                                          auto_data.get("cholesterol_level", ""), key="cholesterol_level")
+        symptoms = st.text_area("📝 Additional Symptoms or Notes", 
+                               auto_data.get("symptoms", ""), key="symptoms")
+        
+        submit_metrics = st.form_submit_button("🔬 Analyze Scan", use_container_width=True)
 
 
     if submit_metrics:
