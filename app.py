@@ -391,12 +391,30 @@ with col_left:
                                         type=["jpg", "png", "jpeg", "pdf"], key="report_upload")
         if report_image and st.button("🔍 Extract Health Metrics from Report"):
             with st.spinner("Extracting health metrics from report..."):
-                report_img = Image.open(report_image)
-                extracted_data = extract_health_metrics_from_report(report_img)
-                if extracted_data:
-                    st.session_state["auto_fill_data"] = extracted_data
-                    st.success("✅ Health metrics extracted! Check the sidebar form.")
-                    st.json(extracted_data)
+                try:
+                    # Handle PDF files
+                    if report_image.type == "application/pdf":
+                        try:
+                            from pdf2image import convert_from_bytes
+                            # Convert PDF to images
+                            images = convert_from_bytes(report_image.read())
+                            report_img = images[0]  # Use first page
+                            st.info(f"📄 Processing PDF (page 1 of {len(images)})")
+                        except ImportError:
+                            st.error("PDF support requires 'pdf2image' library. Please upload an image file (JPG/PNG) instead.")
+                            report_img = None
+                    else:
+                        # Handle image files
+                        report_img = Image.open(report_image)
+                    
+                    if report_img:
+                        extracted_data = extract_health_metrics_from_report(report_img)
+                        if extracted_data:
+                            st.session_state["auto_fill_data"] = extracted_data
+                            st.success("✅ Health metrics extracted! Check the sidebar form.")
+                            st.json(extracted_data)
+                except Exception as e:
+                    st.error(f"Failed to process file: {str(e)}. Please try uploading a JPG/PNG image instead.")
 
     with st.sidebar.form("metrics_form"):
         st.sidebar.header("🏥 Health Metrics Input")
