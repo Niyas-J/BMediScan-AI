@@ -516,171 +516,171 @@ if submit_metrics:
                           "bboxes": [[int, int, int, int]]
                         }}
                       ]
-                    }}
-                    """
+            }}
+            """
 
-                    status.update(label="Calling AI model...", state="running")
-                    progress.progress(55)
-                    response = model.generate_content([prompt, img])
+            status.update(label="Calling AI model...", state="running")
+            progress.progress(55)
+            response = model.generate_content([prompt, img])
 
-                    raw_text = getattr(response, "text", "") or ""
-                    if not raw_text:
-                        try:
-                            assembled = []
-                            for cand in getattr(response, "candidates", []) or []:
-                                content = getattr(cand, "content", None)
-                                parts = getattr(content, "parts", []) if content else []
-                                for part in parts:
-                                    part_text = getattr(part, "text", None)
-                                    if part_text:
-                                        assembled.append(part_text)
-                            raw_text = "".join(assembled)
-                        except Exception:
-                            raw_text = ""
+            raw_text = getattr(response, "text", "") or ""
+            if not raw_text:
+                try:
+                    assembled = []
+                    for cand in getattr(response, "candidates", []) or []:
+                        content = getattr(cand, "content", None)
+                        parts = getattr(content, "parts", []) if content else []
+                        for part in parts:
+                            part_text = getattr(part, "text", None)
+                            if part_text:
+                                assembled.append(part_text)
+                    raw_text = "".join(assembled)
+                except Exception:
+                    raw_text = ""
 
-                    status.update(label="Parsing model response...", state="running")
-                    progress.progress(70)
-                    response_text = (raw_text or "").strip()
+            status.update(label="Parsing model response...", state="running")
+            progress.progress(70)
+            response_text = (raw_text or "").strip()
 
-                    if response_text.startswith("```"):
-                        lines = response_text.splitlines()
-                        lines = [ln for ln in lines if not ln.strip().startswith("```")]
-                        response_text = "\n".join(lines).strip()
+            if response_text.startswith("```"):
+                lines = response_text.splitlines()
+                lines = [ln for ln in lines if not ln.strip().startswith("```")]
+                response_text = "\n".join(lines).strip()
 
-                    if response_text and (not response_text.startswith("{") or not response_text.endswith("}")):
-                        start = response_text.find("{")
-                        end = response_text.rfind("}")
-                        if start != -1 and end != -1 and end > start:
-                            response_text = response_text[start:end+1]
+            if response_text and (not response_text.startswith("{") or not response_text.endswith("}")):
+                start = response_text.find("{")
+                end = response_text.rfind("}")
+                if start != -1 and end != -1 and end > start:
+                    response_text = response_text[start:end+1]
 
-                    try:
-                        result = json.loads(response_text)
-                        if not isinstance(result, dict) or "anomalies" not in result:
-                            st.error("Invalid API response format. Expected JSON with 'anomalies' key.")
-                            st.stop()
-                    except json.JSONDecodeError as e:
-                        st.error(f"Error parsing API response: {str(e)}. Please try again.")
-                        st.stop()
+            try:
+                result = json.loads(response_text)
+                if not isinstance(result, dict) or "anomalies" not in result:
+                    st.error("Invalid API response format. Expected JSON with 'anomalies' key.")
+                    st.stop()
+            except json.JSONDecodeError as e:
+                st.error(f"Error parsing API response: {str(e)}. Please try again.")
+                st.stop()
 
-                    status.update(label="Rendering metrics and annotations...", state="running")
-                    progress.progress(85)
-                    st.subheader("Health Metrics Overview")
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.metric("Temperature", temperature)
-                        st.metric("Heart Rate", heart_rate)
-                        st.metric("Glucose Level", glucose_level)
-                    with col2:
-                        st.metric("Blood Pressure", blood_pressure)
-                        st.metric("Respiratory Rate", respiratory_rate)
-                        st.metric("Cholesterol Level", cholesterol_level)
-                    with col3:
-                        st.metric("Oxygen Saturation", oxygen_saturation)
-                        st.metric("Weight / Height", f"{weight} / {height}")
+            status.update(label="Rendering metrics and annotations...", state="running")
+            progress.progress(85)
+            st.subheader("Health Metrics Overview")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Temperature", temperature)
+                st.metric("Heart Rate", heart_rate)
+                st.metric("Glucose Level", glucose_level)
+            with col2:
+                st.metric("Blood Pressure", blood_pressure)
+                st.metric("Respiratory Rate", respiratory_rate)
+                st.metric("Cholesterol Level", cholesterol_level)
+            with col3:
+                st.metric("Oxygen Saturation", oxygen_saturation)
+                st.metric("Weight / Height", f"{weight} / {height}")
 
-                    annotated_img = img.copy()
-                    draw = ImageDraw.Draw(annotated_img)
-                    if "anomalies" in result and result["anomalies"]:
-                        for anomaly in result["anomalies"]:
-                            if "bbox" in anomaly and isinstance(anomaly["bbox"], list) and len(anomaly["bbox"]) == 4:
-                                bbox = tuple(anomaly["bbox"])
-                                draw.rectangle(bbox, outline="red", width=5)
-                            if "bboxes" in anomaly and isinstance(anomaly["bboxes"], list):
-                                for bb in anomaly["bboxes"]:
-                                    if isinstance(bb, list) and len(bb) == 4:
-                                        draw.rectangle(tuple(bb), outline="red", width=5)
+            annotated_img = img.copy()
+            draw = ImageDraw.Draw(annotated_img)
+            if "anomalies" in result and result["anomalies"]:
+                for anomaly in result["anomalies"]:
+                    if "bbox" in anomaly and isinstance(anomaly["bbox"], list) and len(anomaly["bbox"]) == 4:
+                        bbox = tuple(anomaly["bbox"])
+                        draw.rectangle(bbox, outline="red", width=5)
+                    if "bboxes" in anomaly and isinstance(anomaly["bboxes"], list):
+                        for bb in anomaly["bboxes"]:
+                            if isinstance(bb, list) and len(bb) == 4:
+                                draw.rectangle(tuple(bb), outline="red", width=5)
 
-                    img_byte_arr = io.BytesIO()
-                    annotated_img.save(img_byte_arr, format='PNG')
-                    img_byte_arr.seek(0)
+            img_byte_arr = io.BytesIO()
+            annotated_img.save(img_byte_arr, format='PNG')
+            img_byte_arr.seek(0)
 
-                    st.image(img_byte_arr, caption="Annotated Body Scan (Anomalies Highlighted in Red)", use_column_width=True)
+            st.image(img_byte_arr, caption="Annotated Body Scan (Anomalies Highlighted in Red)", use_column_width=True)
 
-                    overall = result.get("overall_summary", {}) if isinstance(result, dict) else {}
-                    if overall:
-                        triage = overall.get("triage", "none")
-                        triage_color = {
-                            "none": "#6c757d",
-                            "routine": "#0d6efd",
-                            "urgent": "#fd7e14",
-                            "emergency": "#dc3545",
-                        }.get(str(triage).lower(), "#6c757d")
-                        st.markdown(f"<div class='pop-in' style='padding:10px;border-radius:8px;background: rgba(255,255,255,0.1);'>"
-                                    f"<span style='background:{triage_color};padding:4px 8px;border-radius:6px;color:white;font-weight:600;'>Triage: {triage.title()}</span>"
-                                    f"<div style='margin-top:8px;'>{overall.get('summary','')}</div>"
-                                    f"</div>", unsafe_allow_html=True)
-                        next_steps = overall.get("next_steps", [])
-                        if next_steps:
-                            st.markdown("**Recommended Next Steps**")
-                            for step in next_steps:
-                                st.markdown(f"- {step}")
-                        if overall.get("disclaimer"):
-                            st.caption(overall.get("disclaimer"))
+            overall = result.get("overall_summary", {}) if isinstance(result, dict) else {}
+            if overall:
+                triage = overall.get("triage", "none")
+                triage_color = {
+                    "none": "#6c757d",
+                    "routine": "#0d6efd",
+                    "urgent": "#fd7e14",
+                    "emergency": "#dc3545",
+                }.get(str(triage).lower(), "#6c757d")
+                st.markdown(f"<div class='pop-in' style='padding:10px;border-radius:8px;background: rgba(255,255,255,0.1);'>"
+                            f"<span style='background:{triage_color};padding:4px 8px;border-radius:6px;color:white;font-weight:600;'>Triage: {triage.title()}</span>"
+                            f"<div style='margin-top:8px;'>{overall.get('summary','')}</div>"
+                            f"</div>", unsafe_allow_html=True)
+                next_steps = overall.get("next_steps", [])
+                if next_steps:
+                    st.markdown("**Recommended Next Steps**")
+                    for step in next_steps:
+                        st.markdown(f"- {step}")
+                if overall.get("disclaimer"):
+                    st.caption(overall.get("disclaimer"))
 
-                    st.subheader("Analysis Results")
-                    if "anomalies" in result and result["anomalies"]:
-                        for i, anomaly in enumerate(result["anomalies"], 1):
-                            header = anomaly.get('name', 'Unnamed')
-                            severity = str(anomaly.get('severity','')).title()
-                            confidence = anomaly.get('confidence')
-                            likely_condition = anomaly.get('likely_condition')
-                            with st.expander(f"Anomaly {i}: {header}"):
-                                tags = []
-                                if severity:
-                                    tags.append(f"<span style='background:#6f42c1;color:white;padding:2px 8px;border-radius:6px;margin-right:6px;'>Severity: {severity}</span>")
-                                if isinstance(confidence, (int, float)):
-                                    pct = max(0, min(100, int(round(confidence * 100))))
-                                    tags.append(f"<span style='background:#198754;color:white;padding:2px 8px;border-radius:6px;margin-right:6px;'>Confidence: {pct}%</span>")
-                                if likely_condition:
-                                    tags.append(f"<span style='background:#0d6efd;color:white;padding:2px 8px;border-radius:6px;margin-right:6px;'>Likely: {likely_condition}</span>")
-                                if tags:
-                                    st.markdown(" ".join(tags), unsafe_allow_html=True)
+            st.subheader("Analysis Results")
+            if "anomalies" in result and result["anomalies"]:
+                for i, anomaly in enumerate(result["anomalies"], 1):
+                    header = anomaly.get('name', 'Unnamed')
+                    severity = str(anomaly.get('severity','')).title()
+                    confidence = anomaly.get('confidence')
+                    likely_condition = anomaly.get('likely_condition')
+                    with st.expander(f"Anomaly {i}: {header}"):
+                        tags = []
+                        if severity:
+                            tags.append(f"<span style='background:#6f42c1;color:white;padding:2px 8px;border-radius:6px;margin-right:6px;'>Severity: {severity}</span>")
+                        if isinstance(confidence, (int, float)):
+                            pct = max(0, min(100, int(round(confidence * 100))))
+                            tags.append(f"<span style='background:#198754;color:white;padding:2px 8px;border-radius:6px;margin-right:6px;'>Confidence: {pct}%</span>")
+                        if likely_condition:
+                            tags.append(f"<span style='background:#0d6efd;color:white;padding:2px 8px;border-radius:6px;margin-right:6px;'>Likely: {likely_condition}</span>")
+                        if tags:
+                            st.markdown(" ".join(tags), unsafe_allow_html=True)
 
-                                st.markdown("**Description**")
-                                st.write(anomaly.get("description", "N/A"))
+                        st.markdown("**Description**")
+                        st.write(anomaly.get("description", "N/A"))
 
-                                measurements = anomaly.get("measurements", {})
-                                if isinstance(measurements, dict) and measurements:
-                                    st.markdown("**Measurements**")
-                                    for k, v in measurements.items():
-                                        st.write(f"- {k}: {v}")
+                        measurements = anomaly.get("measurements", {})
+                        if isinstance(measurements, dict) and measurements:
+                            st.markdown("**Measurements**")
+                            for k, v in measurements.items():
+                                st.write(f"- {k}: {v}")
 
-                                differentials = anomaly.get("differentials", [])
-                                if isinstance(differentials, list) and differentials:
-                                    st.markdown("**Differential Diagnoses**")
-                                    for d in differentials:
-                                        st.write(f"- {d}")
+                        differentials = anomaly.get("differentials", [])
+                        if isinstance(differentials, list) and differentials:
+                            st.markdown("**Differential Diagnoses**")
+                            for d in differentials:
+                                st.write(f"- {d}")
 
-                                st.markdown("**Research-Backed Explanation**")
-                                st.write(anomaly.get("explanation", "N/A"))
+                        st.markdown("**Research-Backed Explanation**")
+                        st.write(anomaly.get("explanation", "N/A"))
 
-                                st.markdown("**Suggestions**")
-                                st.write(anomaly.get("suggestion", "N/A"))
+                        st.markdown("**Suggestions**")
+                        st.write(anomaly.get("suggestion", "N/A"))
 
-                                citations = anomaly.get("citations", [])
-                                if isinstance(citations, list) and citations:
-                                    st.markdown("**Citations**")
-                                    for c in citations:
-                                        title = c.get("title", "Reference") if isinstance(c, dict) else str(c)
-                                        url = c.get("url") if isinstance(c, dict) else None
-                                        year = c.get("year") if isinstance(c, dict) else None
-                                        label = f"{title} ({year})" if year else title
-                                        if url:
-                                            st.markdown(f"- [{label}]({url})")
-                                        else:
-                                            st.markdown(f"- {label}")
-                    else:
-                        st.success("No anomalies detected in the body scan based on the analysis.")
+                        citations = anomaly.get("citations", [])
+                        if isinstance(citations, list) and citations:
+                            st.markdown("**Citations**")
+                            for c in citations:
+                                title = c.get("title", "Reference") if isinstance(c, dict) else str(c)
+                                url = c.get("url") if isinstance(c, dict) else None
+                                year = c.get("year") if isinstance(c, dict) else None
+                                label = f"{title} ({year})" if year else title
+                                if url:
+                                    st.markdown(f"- [{label}]({url})")
+                                else:
+                                    st.markdown(f"- {label}")
+            else:
+                st.success("No anomalies detected in the body scan based on the analysis.")
 
-                    status.update(label="Analysis complete", state="complete")
-                    progress.progress(100)
+            status.update(label="Analysis complete", state="complete")
+            progress.progress(100)
 
-            except genai.types.generation_types.BlockedPromptException:
-                    st.error("API request blocked due to content policy. Please ensure the image and inputs are appropriate (e.g., valid medical scan, no sensitive content).")
-                    status.update(label="Request blocked", state="error")
-            except Exception as e:
-                    st.error(f"An error occurred during analysis: {str(e)}. Please check your API key or try a different image.")
-                    status.update(label="Analysis failed", state="error")
+        except genai.types.generation_types.BlockedPromptException:
+            st.error("API request blocked due to content policy. Please ensure the image and inputs are appropriate (e.g., valid medical scan, no sensitive content).")
+            status.update(label="Request blocked", state="error")
+        except Exception as e:
+            st.error(f"An error occurred during analysis: {str(e)}. Please check your API key or try a different image.")
+            status.update(label="Analysis failed", state="error")
 
 with col_right:
     st.markdown('<div class="vertical-section pop-in">', unsafe_allow_html=True)
