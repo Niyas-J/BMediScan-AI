@@ -331,9 +331,12 @@ with tab3:
                     extracted_data = extract_health_metrics_from_report(report_img)
                     if extracted_data:
                         st.session_state["auto_fill_data"] = extracted_data
-                        st.success("✅ Health metrics extracted! Check the sidebar form.")
+                        st.success("✅ Health metrics extracted and auto-filled in the sidebar! ⬅️")
                         with st.expander("📊 View Extracted Data"):
                             st.json(extracted_data)
+                        st.info("👈 Check the sidebar form - all fields have been auto-filled with extracted data!")
+                        # Force rerun to update form
+                        st.rerun()
             except Exception as e:
                 st.error(f"Failed to process: {str(e)}. Try uploading JPG/PNG.")
 
@@ -342,10 +345,14 @@ st.markdown("---")
 # Sidebar form for health metrics
 with st.sidebar.form("metrics_form"):
     st.sidebar.header("🏥 Health Metrics Input")
-    st.caption("Fill manually or auto-fill by uploading a medical report above")
     
     # Get auto-filled data if available
     auto_data = st.session_state.get("auto_fill_data", {})
+    
+    if auto_data:
+        st.success("✅ Auto-filled from medical report!")
+    else:
+        st.caption("Fill manually or upload a medical report to auto-fill")
     
     temperature = st.text_input("🌡️ Temperature", 
                                 auto_data.get("temperature", ""), 
