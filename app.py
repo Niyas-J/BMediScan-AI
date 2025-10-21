@@ -13,9 +13,9 @@ import re
 st.set_page_config(page_title="MediScan AI", page_icon="🩺", layout="wide", initial_sidebar_state="expanded")
 
 # External links
-GITHUB_REPO_URL = "https://github.com/your-org/mediscan-ai"
-DOCS_URL = "https://your-org.github.io/mediscan-ai"
-DEPLOY_GUIDE_URL = "https://github.com/your-org/mediscan-ai#deployment"
+GITHUB_REPO_URL = "https://github.com/Niyas-J/BMediScan-AI"
+DOCS_URL = "https://github.com/Niyas-J/BMediScan-AI#readme"
+DEPLOY_GUIDE_URL = "https://github.com/Niyas-J/BMediScan-AI#deployment"
 
 # Suppress unnecessary logging
 os.environ["GLOG_minloglevel"] = "1"
@@ -477,47 +477,46 @@ if submit_metrics:
 
             status.update(label="Building prompt...", state="running")
             progress.progress(35)
-            prompt = f"""
-            You are a careful, conservative medical assistant. Analyze this body scan image for anomalies, infections, or other findings.
-                    Use the provided health measures for context: {health_data}
+            prompt = f"""You are a careful, conservative medical assistant. Analyze this body scan image for anomalies, infections, or other findings.
+Use the provided health measures for context: {health_data}
 
-                    Requirements:
-                    - Be specific and conservative; avoid overconfident claims.
-                    - Return well-structured JSON that downstream tools can parse.
-                    - Include severity and confidence for each anomaly.
-                    - Prefer measurable observations and classical radiology descriptors when applicable.
+Requirements:
+- Be specific and conservative; avoid overconfident claims.
+- Return well-structured JSON that downstream tools can parse.
+- Include severity and confidence for each anomaly.
+- Prefer measurable observations and classical radiology descriptors when applicable.
 
-                    Bounding boxes:
-                    - Image size is {width}x{height} pixels.
-                    - Format each bounding box as [x1, y1, x2, y2].
-                    - Provide either a single "bbox" or a list "bboxes" when multiple regions exist.
+Bounding boxes:
+- Image size is {width}x{height} pixels.
+- Format each bounding box as [x1, y1, x2, y2].
+- Provide either a single "bbox" or a list "bboxes" when multiple regions exist.
 
-                    Output strictly in JSON format (no extra text):
-                    {{
-                      "overall_summary": {{
-                        "summary": "string",
-                        "triage": "none | routine | urgent | emergency",
-                        "next_steps": ["string"],
-                        "disclaimer": "string"
-                      }},
-                      "anomalies": [
-                        {{
-                          "name": "string",
-                          "likely_condition": "string",
-                          "severity": "low | moderate | high",
-                          "confidence": 0.0,
-                          "description": "string",
-                          "measurements": {{"key": "value"}},
-                          "explanation": "string",
-                          "suggestion": "string",
-                          "differentials": ["string"],
-                          "citations": [{{"title": "string", "url": "string", "doi": "string", "year": 2020}}],
-                          "bbox": [int, int, int, int],
-                          "bboxes": [[int, int, int, int]]
-                        }}
-                      ]
-            }}
-            """
+Output strictly in JSON format (no extra text):
+{{
+  "overall_summary": {{
+    "summary": "string",
+    "triage": "none | routine | urgent | emergency",
+    "next_steps": ["string"],
+    "disclaimer": "string"
+  }},
+  "anomalies": [
+    {{
+      "name": "string",
+      "likely_condition": "string",
+      "severity": "low | moderate | high",
+      "confidence": 0.0,
+      "description": "string",
+      "measurements": {{"key": "value"}},
+      "explanation": "string",
+      "suggestion": "string",
+      "differentials": ["string"],
+      "citations": [{{"title": "string", "url": "string", "doi": "string", "year": 2020}}],
+      "bbox": [int, int, int, int],
+      "bboxes": [[int, int, int, int]]
+    }}
+  ]
+}}
+"""
 
             status.update(label="Calling AI model...", state="running")
             progress.progress(55)
