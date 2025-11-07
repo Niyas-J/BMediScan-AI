@@ -829,107 +829,115 @@ Output strictly in JSON format (no extra text):
             
             st.markdown("<br>", unsafe_allow_html=True)
             
-            # Main Layout: Scan + Vitals (Body visualization removed)
-            # Adjusted column ratio to make image smaller
-            scan_col, vitals_col = st.columns([1.2, 1])
+            # Main Layout: Scan + Results (direct results next to image)
+            # Adjusted column ratio to make image smaller and show results next to it
+            scan_col, results_col = st.columns([1.2, 1.3])
             
             # Left: Annotated Scan - Display with smaller width
             with scan_col:
                 st.image(img_byte_arr, caption="Annotated Medical Scan", width=500)
             
-            # Right: Live Vitals Panel - Using Streamlit metrics
-            with vitals_col:
-                st.markdown("""
-                <div style="background: linear-gradient(135deg, rgba(0, 20, 40, 0.9), rgba(0, 40, 80, 0.9)); 
-                            padding: 20px; border-radius: 16px; border: 1px solid rgba(0, 212, 255, 0.3); 
-                            box-shadow: 0 8px 32px rgba(0, 212, 255, 0.2);">
-                    <h4 style="color: #00d4ff; margin-bottom: 20px; font-size: 14px; letter-spacing: 2px; text-align: center;">VITAL SIGNS</h4>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                # Display vitals using Streamlit metrics
+            # Right: Direct Analysis Results - Overall Summary and Anomalies next to image
+            with results_col:
+                overall = result.get("overall_summary", {}) if isinstance(result, dict) else {}
+                if overall:
+                    triage = overall.get("triage", "none")
+                    triage_color = {
+                        "none": "#6c757d",
+                        "routine": "#0d6efd",
+                        "urgent": "#fd7e14",
+                        "emergency": "#dc3545",
+                    }.get(str(triage).lower(), "#6c757d")
+                    st.markdown(f"""
+                    <div style='padding:15px;border-radius:12px;background: rgba(255,255,255,0.1); margin-bottom: 20px; border: 1px solid {triage_color}20;'>
+                        <div style='display: flex; align-items: center; gap: 10px; margin-bottom: 10px;'>
+                            <span style='background:{triage_color};padding:6px 12px;border-radius:6px;color:white;font-weight:600;font-size:12px;'>Triage: {triage.title()}</span>
+                        </div>
+                        <div style='color: #e8eaf0; font-size: 14px; line-height: 1.6;'>{overall.get('summary','')}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    next_steps = overall.get("next_steps", [])
+                    if next_steps:
+                        st.markdown("**📋 Recommended Next Steps**")
+                        for step in next_steps:
+                            st.markdown(f"- {step}")
+                    if overall.get("disclaimer"):
+                        st.caption(overall.get("disclaimer"))
+
+                st.markdown("---")
+                st.subheader("🔍 Analysis Results")
+                if "anomalies" in result and result["anomalies"]:
+                    for i, anomaly in enumerate(result["anomalies"], 1):
+                        header = anomaly.get('name', 'Unnamed')
+                        severity = str(anomaly.get('severity','')).title()
+                        confidence = anomaly.get('confidence')
+                        likely_condition = anomaly.get('likely_condition')
+                        with st.expander(f"Anomaly {i}: {header}", expanded=(i == 1)):
+                            tags = []
+                            if severity:
+                                tags.append(f"<span style='background:#6f42c1;color:white;padding:2px 8px;border-radius:6px;margin-right:6px;font-size:11px;'>Severity: {severity}</span>")
+                            if isinstance(confidence, (int, float)):
+                                pct = max(0, min(100, int(round(confidence * 100))))
+                                tags.append(f"<span style='background:#198754;color:white;padding:2px 8px;border-radius:6px;margin-right:6px;font-size:11px;'>Confidence: {pct}%</span>")
+                            if likely_condition:
+                                tags.append(f"<span style='background:#0d6efd;color:white;padding:2px 8px;border-radius:6px;margin-right:6px;font-size:11px;'>Likely: {likely_condition}</span>")
+                            if tags:
+                                st.markdown(" ".join(tags), unsafe_allow_html=True)
+
+                            st.markdown("**Description**")
+                            st.write(anomaly.get("description", "N/A"))
+
+                            measurements = anomaly.get("measurements", {})
+                            if isinstance(measurements, dict) and measurements:
+                                st.markdown("**Measurements**")
+                                for k, v in measurements.items():
+                                    st.write(f"- {k}: {v}")
+
+                            differentials = anomaly.get("differentials", [])
+                            if isinstance(differentials, list) and differentials:
+                                st.markdown("**Differential Diagnoses**")
+                                for d in differentials:
+                                    st.write(f"- {d}")
+
+                            st.markdown("**Research-Backed Explanation**")
+                            st.write(anomaly.get("explanation", "N/A"))
+
+                            st.markdown("**Suggestions**")
+                            st.write(anomaly.get("suggestion", "N/A"))
+
+                            citations = anomaly.get("citations", [])
+                            if isinstance(citations, list) and citations:
+                                st.markdown("**Citations**")
+                                for c in citations:
+                                    title = c.get("title", "Reference") if isinstance(c, dict) else str(c)
+                                    url = c.get("url") if isinstance(c, dict) else None
+                                    year = c.get("year") if isinstance(c, dict) else None
+                                    label = f"{title} ({year})" if year else title
+                                    if url:
+                                        st.markdown(f"- [{label}]({url})")
+                                    else:
+                                        st.markdown(f"- {label}")
+                else:
+                    st.success("✅ No anomalies detected in the body scan based on the analysis.")
+            
+            # Vitals displayed below the image and results
+            st.markdown("---")
+            st.markdown("""
+            <div style="padding: 15px 0;">
+                <h3 style="color: #00d4ff; margin: 0 0 15px 0; font-size: 18px;">💓 Live Vitals Panel</h3>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            vitals_col1, vitals_col2, vitals_col3 = st.columns(3)
+            with vitals_col1:
                 st.metric("❤️ Heart Rate", heart_rate or "N/A")
                 st.metric("💉 Blood Pressure", blood_pressure or "N/A")
+            with vitals_col2:
                 st.metric("🌡️ Temperature", temperature or "N/A")
                 st.metric("🩺 Oxygen Saturation", oxygen_saturation or "N/A")
+            with vitals_col3:
                 st.metric("🫁 Respiratory Rate", respiratory_rate or "N/A")
                 st.metric("🍬 Glucose", glucose_level or "N/A")
-
-            overall = result.get("overall_summary", {}) if isinstance(result, dict) else {}
-            if overall:
-                triage = overall.get("triage", "none")
-                triage_color = {
-                    "none": "#6c757d",
-                    "routine": "#0d6efd",
-                    "urgent": "#fd7e14",
-                    "emergency": "#dc3545",
-                }.get(str(triage).lower(), "#6c757d")
-                st.markdown(f"<div class='pop-in' style='padding:10px;border-radius:8px;background: rgba(255,255,255,0.1);'>"
-                            f"<span style='background:{triage_color};padding:4px 8px;border-radius:6px;color:white;font-weight:600;'>Triage: {triage.title()}</span>"
-                            f"<div style='margin-top:8px;'>{overall.get('summary','')}</div>"
-                            f"</div>", unsafe_allow_html=True)
-                next_steps = overall.get("next_steps", [])
-                if next_steps:
-                    st.markdown("**Recommended Next Steps**")
-                    for step in next_steps:
-                        st.markdown(f"- {step}")
-                if overall.get("disclaimer"):
-                    st.caption(overall.get("disclaimer"))
-
-                    st.subheader("Analysis Results")
-                    if "anomalies" in result and result["anomalies"]:
-                        for i, anomaly in enumerate(result["anomalies"], 1):
-                            header = anomaly.get('name', 'Unnamed')
-                            severity = str(anomaly.get('severity','')).title()
-                            confidence = anomaly.get('confidence')
-                            likely_condition = anomaly.get('likely_condition')
-                            with st.expander(f"Anomaly {i}: {header}"):
-                                tags = []
-                                if severity:
-                                    tags.append(f"<span style='background:#6f42c1;color:white;padding:2px 8px;border-radius:6px;margin-right:6px;'>Severity: {severity}</span>")
-                                if isinstance(confidence, (int, float)):
-                                    pct = max(0, min(100, int(round(confidence * 100))))
-                                    tags.append(f"<span style='background:#198754;color:white;padding:2px 8px;border-radius:6px;margin-right:6px;'>Confidence: {pct}%</span>")
-                                if likely_condition:
-                                    tags.append(f"<span style='background:#0d6efd;color:white;padding:2px 8px;border-radius:6px;margin-right:6px;'>Likely: {likely_condition}</span>")
-                                if tags:
-                                    st.markdown(" ".join(tags), unsafe_allow_html=True)
-
-                                st.markdown("**Description**")
-                                st.write(anomaly.get("description", "N/A"))
-
-                                measurements = anomaly.get("measurements", {})
-                                if isinstance(measurements, dict) and measurements:
-                                    st.markdown("**Measurements**")
-                                    for k, v in measurements.items():
-                                        st.write(f"- {k}: {v}")
-
-                                differentials = anomaly.get("differentials", [])
-                                if isinstance(differentials, list) and differentials:
-                                    st.markdown("**Differential Diagnoses**")
-                                    for d in differentials:
-                                        st.write(f"- {d}")
-
-                                st.markdown("**Research-Backed Explanation**")
-                                st.write(anomaly.get("explanation", "N/A"))
-
-                                st.markdown("**Suggestions**")
-                                st.write(anomaly.get("suggestion", "N/A"))
-
-                                citations = anomaly.get("citations", [])
-                                if isinstance(citations, list) and citations:
-                                    st.markdown("**Citations**")
-                                    for c in citations:
-                                        title = c.get("title", "Reference") if isinstance(c, dict) else str(c)
-                                        url = c.get("url") if isinstance(c, dict) else None
-                                        year = c.get("year") if isinstance(c, dict) else None
-                                        label = f"{title} ({year})" if year else title
-                                        if url:
-                                            st.markdown(f"- [{label}]({url})")
-                                        else:
-                                            st.markdown(f"- {label}")
-                    else:
-                        st.success("No anomalies detected in the body scan based on the analysis.")
             
             # Key Areas of Concern (like reference image with horizontal sliders)
             st.markdown("---")
