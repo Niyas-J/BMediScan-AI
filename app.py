@@ -596,43 +596,6 @@ with st.form("metrics_form"):
     
     submit_metrics = st.form_submit_button("🔬 Submit & Analyze Scan", use_container_width=True)
 
-# Project Info Section (moved down)
-st.header("🚀 Project Overview")
-col1, col2 = st.columns(2)
-with col1:
-    st.subheader("About MediScan AI")
-    st.write("""
-    - **Open-Source Inspired**: Built with modern tech stack (Streamlit, Gemini API, Real-time APIs) for easy deployment and customization.
-    - **Core Features**: Image analysis, health metrics tracking, anomaly highlighting, detailed reports.
-    - **Tech Stack**: Python, Streamlit for UI, Google Generative AI for vision processing, APIs for live data (Dengue, Mpox, Measles, Influenza).
-    - **Deployment**: Self-hostable on Kubernetes or cloud platforms like Vercel/AWS, similar to Huly's on-premise options.
-    """)
-with col2:
-    st.subheader("Why MediScan AI?")
-    st.write("""
-    - **Efficiency**: Combines diagnostics, tracking, and insights in one dashboard – no more switching tools.
-    - **Accuracy**: Leverages Gemini's multimodal AI for precise anomaly detection.
-    - **Collaboration**: Real-time disease insights and shareable reports for teams.
-    - **Accessibility**: Free for educational use; premium for advanced features (coming soon).
-    """)
-
-# Features Section
-st.header("✨ Key Features")
-features_data = {
-    "AI-Powered Scan Analysis": "Upload body scans and get instant anomaly detection with bounding box highlights.",
-    "Real-Time Health Metrics": "Track vital signs like temperature, BP, heart rate, and more with interactive dashboards.",
-    "Global Disease Insights": "Live Dengue, Mpox, Measles, and Influenza data fetched from reliable APIs for contextual awareness.",
-    "Research-Backed Reports": "Detailed explanations, citations, and treatment suggestions for each finding.",
-    "Customizable Workflows": "Sidebar inputs for metrics; expandable results for in-depth review.",
-    "VR/3D Integration Ready": "Extensible for immersive views (future update inspired by modern PM tools)."
-}
-for feature, desc in features_data.items():
-    st.markdown(f"""
-    <div class="pop-in" style="background: rgba(255, 255, 255, 0.1); padding: 10px; border-radius: 8px; margin: 5px 0;">
-        <strong>{feature}</strong><br>{desc}
-    </div>
-    """, unsafe_allow_html=True)
-
 # Analysis Section - Only shown after form submission
 if submit_metrics:
     st.markdown("---")
@@ -1040,7 +1003,11 @@ Output strictly in JSON format (no extra text):
             st.error(f"An error occurred during analysis: {str(e)}. Please check your API key or try a different image.")
             status.update(label="Analysis failed", state="error")
 
-# Real-time Data Integration: Static data from reliable sources
+# Additional Information Sections - Shown at the end after analysis results
+st.markdown("---")
+st.markdown("---")
+
+# Real-time Data Integration: Static data from reliable sources (defined before use)
 @st.cache_data(ttl=3600)
 def fetch_real_time_data():
     dengue_cases = "7,600,000+"
@@ -1048,6 +1015,43 @@ def fetch_real_time_data():
     measles_cases = "1,563"
     influenza_data = {'ILI Percentage': '0.3%'}
     return dengue_cases, mpox_cases, measles_cases, influenza_data
+
+# Project Info Section
+st.header("🚀 Project Overview")
+col1, col2 = st.columns(2)
+with col1:
+    st.subheader("About MediScan AI")
+    st.write("""
+    - **Open-Source Inspired**: Built with modern tech stack (Streamlit, Gemini API, Real-time APIs) for easy deployment and customization.
+    - **Core Features**: Image analysis, health metrics tracking, anomaly highlighting, detailed reports.
+    - **Tech Stack**: Python, Streamlit for UI, Google Generative AI for vision processing, APIs for live data (Dengue, Mpox, Measles, Influenza).
+    - **Deployment**: Self-hostable on Kubernetes or cloud platforms like Vercel/AWS, similar to Huly's on-premise options.
+    """)
+with col2:
+    st.subheader("Why MediScan AI?")
+    st.write("""
+    - **Efficiency**: Combines diagnostics, tracking, and insights in one dashboard – no more switching tools.
+    - **Accuracy**: Leverages Gemini's multimodal AI for precise anomaly detection.
+    - **Collaboration**: Real-time disease insights and shareable reports for teams.
+    - **Accessibility**: Free for educational use; premium for advanced features (coming soon).
+    """)
+
+# Features Section
+st.header("✨ Key Features")
+features_data = {
+    "AI-Powered Scan Analysis": "Upload body scans and get instant anomaly detection with bounding box highlights.",
+    "Real-Time Health Metrics": "Track vital signs like temperature, BP, heart rate, and more with interactive dashboards.",
+    "Global Disease Insights": "Live Dengue, Mpox, Measles, and Influenza data fetched from reliable APIs for contextual awareness.",
+    "Research-Backed Reports": "Detailed explanations, citations, and treatment suggestions for each finding.",
+    "Customizable Workflows": "Sidebar inputs for metrics; expandable results for in-depth review.",
+    "VR/3D Integration Ready": "Extensible for immersive views (future update inspired by modern PM tools)."
+}
+for feature, desc in features_data.items():
+    st.markdown(f"""
+    <div class="pop-in" style="background: rgba(255, 255, 255, 0.1); padding: 10px; border-radius: 8px; margin: 5px 0;">
+        <strong>{feature}</strong><br>{desc}
+    </div>
+    """, unsafe_allow_html=True)
 
 st.markdown("---")
 st.header("🌍 Real-Time Global Disease Insights (2025 Outbreaks)")
