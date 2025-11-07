@@ -770,15 +770,27 @@ Output strictly in JSON format (no extra text):
 
             annotated_img = img.copy()
             draw = ImageDraw.Draw(annotated_img)
+            # Calculate bounding box width based on image size for better visibility
+            original_width, original_height = annotated_img.size
+            bbox_width = max(3, min(5, int(original_width / 200)))  # Scale between 3-5px based on image size
+            
             if "anomalies" in result and result["anomalies"]:
                 for anomaly in result["anomalies"]:
                     if "bbox" in anomaly and isinstance(anomaly["bbox"], list) and len(anomaly["bbox"]) == 4:
                         bbox = tuple(anomaly["bbox"])
-                        draw.rectangle(bbox, outline="red", width=5)
+                        draw.rectangle(bbox, outline="red", width=bbox_width)
                     if "bboxes" in anomaly and isinstance(anomaly["bboxes"], list):
                         for bb in anomaly["bboxes"]:
                             if isinstance(bb, list) and len(bb) == 4:
-                                draw.rectangle(tuple(bb), outline="red", width=5)
+                                draw.rectangle(tuple(bb), outline="red", width=bbox_width)
+
+            # Resize image to make it smaller (max width 600px, maintain aspect ratio)
+            max_width = 600
+            if original_width > max_width:
+                scale_factor = max_width / original_width
+                new_width = max_width
+                new_height = int(original_height * scale_factor)
+                annotated_img = annotated_img.resize((new_width, new_height), Image.Resampling.LANCZOS)
 
             img_byte_arr = io.BytesIO()
             annotated_img.save(img_byte_arr, format='PNG')
@@ -818,11 +830,12 @@ Output strictly in JSON format (no extra text):
             st.markdown("<br>", unsafe_allow_html=True)
             
             # Main Layout: Scan + Vitals (Body visualization removed)
-            scan_col, vitals_col = st.columns([2, 1])
+            # Adjusted column ratio to make image smaller
+            scan_col, vitals_col = st.columns([1.2, 1])
             
-            # Left: Annotated Scan
+            # Left: Annotated Scan - Display with smaller width
             with scan_col:
-                st.image(img_byte_arr, caption="Annotated Medical Scan", use_container_width=True)
+                st.image(img_byte_arr, caption="Annotated Medical Scan", width=500)
             
             # Right: Live Vitals Panel - Using Streamlit metrics
             with vitals_col:
